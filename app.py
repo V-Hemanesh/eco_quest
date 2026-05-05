@@ -4,12 +4,14 @@ import mysql.connector
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-import mysql.connector
 
+# =========================
+# DATABASE CONNECTION (SAFE)
+# =========================
 def get_connection():
     try:
         return mysql.connector.connect(
-            host="localhost",   # temporary (will fix later)
+            host="localhost",   # ⚠️ will replace with cloud DB later
             user="root",
             password="",
             database="ecoquest"
@@ -17,172 +19,75 @@ def get_connection():
     except:
         return None
 
-def get_badge(score, total):
-    percentage = (score / total) * 100
-    if percentage >= 80:
-        return "Eco Hero"
-    elif percentage >= 50:
-        return "Green Learner"
-    else:
-        return "Eco Beginner"
 
-def update_progress(user_id, topic_id, score, total):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    # Get current level
-    current_level = get_user_level(user_id, topic_id)
-
-    # Only level up if passed
-    if score >= total // 2:
-
-        if current_level == "Beginner":
-            new_level = "Intermediate"
-        elif current_level == "Intermediate":
-            new_level = "Advanced"
-        else:
-            new_level = "Advanced"
-
-        # Insert or update
-        cursor.execute("""
-            INSERT INTO user_progress (user_id, topic_id, level_name)
-            VALUES (%s, %s, %s)
-            ON DUPLICATE KEY UPDATE level_name=%s
-        """, (user_id, topic_id, new_level, new_level))
-
-    conn.commit()
-    conn.close()
-
-# LOGIN
-@app.route("/", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        action = request.form.get("action")
-
-        conn = get_connection()
-        cursor = conn.cursor()
-
-        # 🔐 LOGIN
-        if action == "login":
-            usn = request.form["usn"]
-            password = request.form["password"]
-
-            cursor.execute(
-                "SELECT user_id, name FROM users WHERE usn=%s AND password=%s",
-                (usn, password)
-            )
-            user = cursor.fetchone()
-
-            if user:
-                session["user_id"] = user[0]
-                session["name"] = user[1]
-                return redirect("/dashboard")
-            else:
-                return render_template("login.html", error="Invalid login")
-
-        # 📝 REGISTER
-        elif action == "register":
-            name = request.form["name"]
-            usn = request.form["usn"]
-            password = request.form["password"]
-
-            cursor.execute("SELECT * FROM users WHERE usn=%s", (usn,))
-            if cursor.fetchone():
-                return render_template("login.html", error="User already exists")
-
-            cursor.execute(
-                "INSERT INTO users (name, usn, password, total_points, level_name, stars) VALUES (%s,%s,%s,0,'Beginner',0)",
-                (name, usn, password)
-            )
-            conn.commit()
-
-            return render_template("login.html", success="Registered! Please login")
-
-    return render_template("login.html")
+# =========================
+# HOME ROUTE (FIXES NOT FOUND)
+# =========================
+@app.route("/")
+def home():
+    return redirect("/topics")
 
 
+# =========================
+# GET USER LEVEL
+# =========================
 def get_user_level(user_id, topic_id):
     conn = get_connection()
-    cursor = conn.cursor()
+    if not conn:
+        return "Beginner"
 
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT level_name FROM user_progress
         WHERE user_id=%s AND topic_id=%s
     """, (user_id, topic_id))
 
-    row = cursor.fetchone()
+    result = cursor.fetchone()
+    return result[0] if result else "Beginner"
 
-    if row:
-        return row[0]
-    else:
-        return "Beginner"
-    
 
-# DASHBOARD
-@app.route("/dashboard")
-def dashboard():
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT name, total_points, level_name, stars
-        FROM users WHERE user_id=%s
-    """, (session["user_id"],))
-
-    user = cursor.fetchone()
-
-    # Progress % calculation
-    xp = user[1]
-    progress = (xp % 50) * 2   # 50 XP per level
-
-    return render_template("dashboard.html", user=user, progress=progress)
-
-# LEARNING
-@app.route("/learning")
-def learning():
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT topic_name, content FROM topics")
-    topics = cursor.fetchall()
-
-    return render_template("learning.html", topics=topics)
-
-# TOPICS
+# =========================
+# TOPICS PAGE
+# =========================
 @app.route("/topics")
 def topics():
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT topic_id, topic_name FROM topics")
-    topics = cursor.fetchall()
-
+    # temporary topics (can replace with DB later)
+    topics = [
+        (1, "Environment"),
+        (2, "Recycling"),
+        (3, "Climate Change")
+    ]
     return render_template("topics.html", topics=topics)
 
 
-# QUIZ
-from flask import request, render_template, redirect, session
-
+# =========================
+# QUIZ ROUTE
+# =========================
 @app.route("/quiz/<int:topic_id>", methods=["GET", "POST"])
 def quiz(topic_id):
+
+    # ⚠️ TEMP USER (replace with login system later)
+    user_id = 1
+
     conn = get_connection()
+
+    # =========================
+    # HANDLE DB FAILURE (IMPORTANT FOR RENDER)
+    # =========================
     if not conn:
-     "⚠️ Database not connected (cloud DB needed)"
+        return "⚠️ Database not connected (use cloud DB)"
+
     cursor = conn.cursor()
 
-    user_id = session["user_id"]
-
-    # 🔹 Get current level
     user_level = get_user_level(user_id, topic_id)
 
-    # ======================
-    # POST (Submit quiz)
-    # ======================
+    # =========================
+    # POST (SUBMIT QUIZ)
+    # =========================
     if request.method == "POST":
         score = 0
         total = int(request.form.get("total", 0))
 
-        # Calculate score
         for i in range(total):
             if request.form.get(f"q{i}") == request.form.get(f"correct{i}"):
                 score += 1
@@ -190,9 +95,7 @@ def quiz(topic_id):
         xp_gain = score * 10
         stars_gain = score
 
-        # ======================
         # PASS CONDITION
-        # ======================
         if score >= total // 2:
 
             if user_level == "Beginner":
@@ -204,7 +107,6 @@ def quiz(topic_id):
                 message = "🔥 Level Up! Intermediate → Advanced"
 
             else:
-                # Already max level
                 message = "🏆 Topic Completed!"
 
                 return render_template(
@@ -217,7 +119,7 @@ def quiz(topic_id):
                     is_pass=True
                 )
 
-            # 🔹 Update XP + stars
+            # UPDATE XP + STARS
             cursor.execute("""
                 UPDATE users
                 SET total_points = total_points + %s,
@@ -225,7 +127,7 @@ def quiz(topic_id):
                 WHERE user_id = %s
             """, (xp_gain, stars_gain, user_id))
 
-            # 🔹 Save level progression
+            # SAVE LEVEL
             cursor.execute("""
                 INSERT INTO user_progress (user_id, topic_id, level_name)
                 VALUES (%s, %s, %s)
@@ -244,9 +146,7 @@ def quiz(topic_id):
                 is_pass=True
             )
 
-        # ======================
-        # FAIL CONDITION
-        # ======================
+        # FAIL
         else:
             return render_template(
                 "result.html",
@@ -258,9 +158,9 @@ def quiz(topic_id):
                 is_pass=False
             )
 
-    # ======================
-    # GET (Load quiz)
-    # ======================
+    # =========================
+    # GET (LOAD QUESTIONS)
+    # =========================
     cursor.execute("""
         SELECT question, option1, option2, option3, option4, correct_option
         FROM questions
@@ -270,24 +170,12 @@ def quiz(topic_id):
 
     questions = cursor.fetchall()
 
-    return render_template(
-        "quiz.html",
-        questions=questions,
-        level=user_level
-    )
-# LEADERBOARD
-@app.route("/leaderboard")
-def leaderboard():
-    conn = get_connection()
-    cursor = conn.cursor()
+    return render_template("quiz.html", questions=questions, level=user_level)
 
-    cursor.execute("""
-        SELECT name, total_points, stars
-        FROM users ORDER BY total_points DESC
-    """)
-    data = cursor.fetchall()
 
-    return render_template("leaderboard.html", data=data)
-
+# =========================
+# RUN APP
+# =========================
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5050)
+    import os
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5050)))
