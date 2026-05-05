@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>⚔ Choose Your Mission</h2>
+
+{% for t in topics %}
+<div class="card">
+    <a href="/quiz/{{ t[0] }}"><b>{{ t[1] }}</b></a>
+</div>
+{% endfor %}
+
+{% endblock %}

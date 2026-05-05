@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>🎯 Mission Zone</h2>
+
+{% for t in topics %}
+<div class="card">
+    <h3>{{ t[0] }}</h3>
+    <p>{{ t[1] }}</p>
+</div>
+{% endfor %}
+
+{% endblock %}

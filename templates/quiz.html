@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>🧠 Quiz Time</h2>
+
+<!-- TIMER BAR -->
+<div id="timerBarContainer">
+    <div id="timerBar"></div>
+</div>
+<h3>Level: {{ level }}</h3>
+
+<p id="timeText">Time: 30s</p>
+
+<form method="POST">
+
+{% for q in questions %}
+<div class="card fade-in">
+
+    <p><b>{{ loop.index }}. {{ q[0] }}</b></p>
+
+    <label class="option">
+        <input type="radio" name="q{{ loop.index0 }}" value="{{ q[1] }}" required>
+        {{ q[1] }}
+    </label>
+
+    <label class="option">
+        <input type="radio" name="q{{ loop.index0 }}" value="{{ q[2] }}">
+        {{ q[2] }}
+    </label>
+
+    <label class="option">
+        <input type="radio" name="q{{ loop.index0 }}" value="{{ q[3] }}">
+        {{ q[3] }}
+    </label>
+
+    <label class="option">
+        <input type="radio" name="q{{ loop.index0 }}" value="{{ q[4] }}">
+        {{ q[4] }}
+    </label>
+
+    <input type="hidden" name="correct{{ loop.index0 }}" value="{{ q[5] }}">
+
+</div>
+{% endfor %}
+
+<input type="hidden" name="total" value="{{ questions|length }}">
+
+<button type="submit">Submit Quiz 🚀</button>
+
+</form>
+
+<!-- TIMER SCRIPT -->
+<script>
+let time = 30;
+let bar = document.getElementById("timerBar");
+let text = document.getElementById("timeText");
+
+let interval = setInterval(() => {
+    time--;
+    text.innerText = "Time: " + time + "s";
+
+    bar.style.width = (time / 30 * 100) + "%";
+
+    if (time <= 5) bar.style.background = "red";
+
+    if (time <= 0) {
+        clearInterval(interval);
+        alert("Time's up!");
+        document.forms[0].submit();
+    }
+}, 1000);
+</script>
+
+{% endblock %}

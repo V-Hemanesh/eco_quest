@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>👑 Leaderboard</h2>
+
+{% for row in data %}
+<div class="card">
+    <b>{{ loop.index }}. {{ row[0] }}</b><br>
+    XP: {{ row[1] }} | Stars: ⭐ {{ row[2] }}
+</div>
+{% endfor %}
+
+{% endblock %}
