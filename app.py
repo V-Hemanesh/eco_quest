@@ -4,13 +4,18 @@ import mysql.connector
 app = Flask(__name__)
 app.secret_key = "secret123"
 
+import mysql.connector
+
 def get_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="1025",
-        database="eco_game"
-    )
+    try:
+        return mysql.connector.connect(
+            host="localhost",   # temporary (will fix later)
+            user="root",
+            password="",
+            database="ecoquest"
+        )
+    except:
+        return None
 
 def get_badge(score, total):
     percentage = (score / total) * 100
@@ -161,6 +166,8 @@ from flask import request, render_template, redirect, session
 @app.route("/quiz/<int:topic_id>", methods=["GET", "POST"])
 def quiz(topic_id):
     conn = get_connection()
+    if not conn:
+     "⚠️ Database not connected (cloud DB needed)"
     cursor = conn.cursor()
 
     user_id = session["user_id"]
