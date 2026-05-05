@@ -1,27 +1,45 @@
-from flask import Flask, render_template, request, redirect, session
-import mysql.connector
+from flask import Flask, render_template, request, redirect
+import os
 
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-
 # =========================
-# DATABASE CONNECTION (SAFE)
+# SAFE DATABASE (NO CRASH)
 # =========================
 def get_connection():
     try:
+        import mysql.connector
         return mysql.connector.connect(
-            host="localhost",   # ⚠️ will replace with cloud DB later
-            user="root",
-            password="",
-            database="ecoquest"
+            host=os.environ.get("DB_HOST", "localhost"),
+            user=os.environ.get("DB_USER", "root"),
+            password=os.environ.get("DB_PASSWORD", ""),
+            database=os.environ.get("DB_NAME", "ecoquest")
         )
-    except:
+    except Exception as e:
+        print("DB ERROR:", e)
         return None
 
 
 # =========================
-# HOME ROUTE (FIXES NOT FOUND)
+# BADGE SYSTEM
+# =========================
+def get_badge(score, total):
+    if total == 0:
+        return "No Attempt"
+
+    percentage = (score / total) * 100
+
+    if percentage >= 80:
+        return "Eco Hero 🏆"
+    elif percentage >= 50:
+        return "Green Learner 🌱"
+    else:
+        return "Eco Beginner 🍃"
+
+
+# =========================
+# HOME (FIXES NOT FOUND)
 # =========================
 @app.route("/")
 def home():
@@ -29,29 +47,10 @@ def home():
 
 
 # =========================
-# GET USER LEVEL
-# =========================
-def get_user_level(user_id, topic_id):
-    conn = get_connection()
-    if not conn:
-        return "Beginner"
-
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT level_name FROM user_progress
-        WHERE user_id=%s AND topic_id=%s
-    """, (user_id, topic_id))
-
-    result = cursor.fetchone()
-    return result[0] if result else "Beginner"
-
-
-# =========================
-# TOPICS PAGE
+# TOPICS
 # =========================
 @app.route("/topics")
 def topics():
-    # temporary topics (can replace with DB later)
     topics = [
         (1, "Environment"),
         (2, "Recycling"),
@@ -61,29 +60,50 @@ def topics():
 
 
 # =========================
-# QUIZ ROUTE
+# QUIZ
 # =========================
 @app.route("/quiz/<int:topic_id>", methods=["GET", "POST"])
 def quiz(topic_id):
 
-    # ⚠️ TEMP USER (replace with login system later)
-    user_id = 1
-
     conn = get_connection()
 
     # =========================
-    # HANDLE DB FAILURE (IMPORTANT FOR RENDER)
+    # IF DB NOT AVAILABLE (RENDER SAFE MODE)
     # =========================
     if not conn:
-        return "⚠️ Database not connected (use cloud DB)"
+        # fallback questions (so app still works)
+        questions = [
+            ("What is carbon footprint?", "Water use", "Carbon emission", "Oxygen", "Soil", "Carbon emission"),
+            ("Main cause of air pollution?", "Trees", "Vehicles", "Rain", "Soil", "Vehicles"),
+            ("Noise pollution is caused by?", "Water", "Air", "Noise", "Soil", "Noise")
+        ]
 
+        if request.method == "POST":
+            score = 0
+            total = int(request.form.get("total", 0))
+
+            for i in range(total):
+                if request.form.get(f"q{i}") == request.form.get(f"correct{i}"):
+                    score += 1
+
+            badge = get_badge(score, total)
+
+            return render_template(
+                "result.html",
+                score=score,
+                total=total,
+                badge=badge,
+                message="⚠️ Running without database (demo mode)",
+                topic_id=topic_id
+            )
+
+        return render_template("quiz.html", questions=questions, level="Demo Mode")
+
+    # =========================
+    # REAL DB MODE
+    # =========================
     cursor = conn.cursor()
 
-    user_level = get_user_level(user_id, topic_id)
-
-    # =========================
-    # POST (SUBMIT QUIZ)
-    # =========================
     if request.method == "POST":
         score = 0
         total = int(request.form.get("total", 0))
@@ -92,90 +112,31 @@ def quiz(topic_id):
             if request.form.get(f"q{i}") == request.form.get(f"correct{i}"):
                 score += 1
 
-        xp_gain = score * 10
-        stars_gain = score
+        badge = get_badge(score, total)
 
-        # PASS CONDITION
-        if score >= total // 2:
+        return render_template(
+            "result.html",
+            score=score,
+            total=total,
+            badge=badge,
+            message="Quiz Completed",
+            topic_id=topic_id
+        )
 
-            if user_level == "Beginner":
-                new_level = "Intermediate"
-                message = "🎉 Level Up! Beginner → Intermediate"
-
-            elif user_level == "Intermediate":
-                new_level = "Advanced"
-                message = "🔥 Level Up! Intermediate → Advanced"
-
-            else:
-                message = "🏆 Topic Completed!"
-
-                return render_template(
-                    "result.html",
-                    score=score,
-                    total=total,
-                    message=message,
-                    topic_id=topic_id,
-                    xp_gain=xp_gain,
-                    is_pass=True
-                )
-
-            # UPDATE XP + STARS
-            cursor.execute("""
-                UPDATE users
-                SET total_points = total_points + %s,
-                    stars = stars + %s
-                WHERE user_id = %s
-            """, (xp_gain, stars_gain, user_id))
-
-            # SAVE LEVEL
-            cursor.execute("""
-                INSERT INTO user_progress (user_id, topic_id, level_name)
-                VALUES (%s, %s, %s)
-                ON DUPLICATE KEY UPDATE level_name=%s
-            """, (user_id, topic_id, new_level, new_level))
-
-            conn.commit()
-
-            return render_template(
-                "result.html",
-                score=score,
-                total=total,
-                message=message,
-                topic_id=topic_id,
-                xp_gain=xp_gain,
-                is_pass=True
-            )
-
-        # FAIL
-        else:
-            return render_template(
-                "result.html",
-                score=score,
-                total=total,
-                message="❌ Try again to unlock next level",
-                topic_id=topic_id,
-                xp_gain=0,
-                is_pass=False
-            )
-
-    # =========================
-    # GET (LOAD QUESTIONS)
-    # =========================
     cursor.execute("""
         SELECT question, option1, option2, option3, option4, correct_option
         FROM questions
-        WHERE topic_id=%s AND difficulty_level=%s
+        WHERE topic_id=%s
         LIMIT 3
-    """, (topic_id, user_level))
+    """, (topic_id,))
 
     questions = cursor.fetchall()
 
-    return render_template("quiz.html", questions=questions, level=user_level)
+    return render_template("quiz.html", questions=questions, level="Live Mode")
 
 
 # =========================
-# RUN APP
+# RUN
 # =========================
 if __name__ == "__main__":
-    import os
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5050)))
