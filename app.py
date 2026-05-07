@@ -1,17 +1,12 @@
 # pyrefly: ignore [missing-import]
 from flask import Flask, render_template, request, redirect, session
-import mysql.connector
+import sqlite3
 
 app = Flask(__name__)
 app.secret_key = "secret123"
 
 def get_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="1025",
-        database="eco_game"
-    )
+    return sqlite3.connect("database.db")
 
 def get_badge(score, total):
     percentage = (score / total) * 100
@@ -31,7 +26,6 @@ def update_progress(user_id, topic_id, score, total):
 
     # Only level up if passed
     if score >= total // 2:
-
         if current_level == "Beginner":
             new_level = "Intermediate"
         elif current_level == "Intermediate":
@@ -39,12 +33,11 @@ def update_progress(user_id, topic_id, score, total):
         else:
             new_level = "Advanced"
 
-        # Insert or update
+        # Insert or replace (SQLite equivalent of ON DUPLICATE KEY UPDATE)
         cursor.execute("""
-            INSERT INTO user_progress (user_id, topic_id, level_name)
-            VALUES (%s, %s, %s)
-            ON DUPLICATE KEY UPDATE level_name=%s
-        """, (user_id, topic_id, new_level, new_level))
+            INSERT OR REPLACE INTO user_progress (user_id, topic_id, level_name)
+            VALUES (?, ?, ?)
+        """, (user_id, topic_id, new_level))
 
     conn.commit()
     conn.close()
@@ -64,10 +57,11 @@ def login():
             password = request.form["password"]
 
             cursor.execute(
-                "SELECT user_id, name FROM users WHERE usn=%s AND password=%s",
+                "SELECT user_id, name FROM users WHERE usn=? AND password=?",
                 (usn, password)
             )
             user = cursor.fetchone()
+            conn.close()
 
             if user:
                 session["user_id"] = user[0]
@@ -82,15 +76,17 @@ def login():
             usn = request.form["usn"]
             password = request.form["password"]
 
-            cursor.execute("SELECT * FROM users WHERE usn=%s", (usn,))
+            cursor.execute("SELECT * FROM users WHERE usn=?", (usn,))
             if cursor.fetchone():
+                conn.close()
                 return render_template("login.html", error="User already exists")
 
             cursor.execute(
-                "INSERT INTO users (name, usn, password, total_points, level_name, stars) VALUES (%s,%s,%s,0,'Beginner',0)",
+                "INSERT INTO users (name, usn, password, total_points, level_name, stars) VALUES (?,?,?,0,'Beginner',0)",
                 (name, usn, password)
             )
             conn.commit()
+            conn.close()
 
             return render_template("login.html", success="Registered! Please login")
 
@@ -106,10 +102,11 @@ def get_user_level(user_id, topic_id):
 
     cursor.execute("""
         SELECT level_name FROM user_progress
-        WHERE user_id=%s AND topic_id=%s
+        WHERE user_id=? AND topic_id=?
     """, (user_id, topic_id))
 
     row = cursor.fetchone()
+    conn.close()
 
     if row:
         return row[0]
@@ -120,15 +117,19 @@ def get_user_level(user_id, topic_id):
 # DASHBOARD
 @app.route("/dashboard")
 def dashboard():
+    if "user_id" not in session:
+        return redirect("/")
+        
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
         SELECT name, total_points, level_name, stars
-        FROM users WHERE user_id=%s
+        FROM users WHERE user_id=?
     """, (session["user_id"],))
 
     user = cursor.fetchone()
+    conn.close()
 
     # Progress % calculation
     xp = user[1]
@@ -144,6 +145,7 @@ def learning():
 
     cursor.execute("SELECT topic_id, topic_name, content FROM topics")
     topics = cursor.fetchall()
+    conn.close()
 
     return render_template("learning.html", topics=topics)
 
@@ -152,8 +154,9 @@ def topic_detail(topic_id):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT topic_id, topic_name, content FROM topics WHERE topic_id=%s", (topic_id,))
+    cursor.execute("SELECT topic_id, topic_name, content FROM topics WHERE topic_id=?", (topic_id,))
     topic = cursor.fetchone()
+    conn.close()
 
     if not topic:
         return redirect("/learning")
@@ -265,19 +268,19 @@ def quiz(topic_id):
             # 🔹 Update XP + stars
             cursor.execute("""
                 UPDATE users
-                SET total_points = total_points + %s,
-                    stars = stars + %s
-                WHERE user_id = %s
+                SET total_points = total_points + ?,
+                    stars = stars + ?
+                WHERE user_id = ?
             """, (xp_gain, stars_gain, user_id))
 
             # 🔹 Save level progression
             cursor.execute("""
-                INSERT INTO user_progress (user_id, topic_id, level_name)
-                VALUES (%s, %s, %s)
-                ON DUPLICATE KEY UPDATE level_name=%s
-            """, (user_id, topic_id, new_level, new_level))
+                INSERT OR REPLACE INTO user_progress (user_id, topic_id, level_name)
+                VALUES (?, ?, ?)
+            """, (user_id, topic_id, new_level))
 
             conn.commit()
+            conn.close()
 
             return render_template(
                 "result.html",
@@ -309,12 +312,13 @@ def quiz(topic_id):
     cursor.execute("""
         SELECT question, option1, option2, option3, option4, correct_option
         FROM questions
-        WHERE topic_id=%s AND difficulty_level=%s
-        ORDER BY RAND()
+        WHERE topic_id=? AND difficulty_level=?
+        ORDER BY RANDOM()
         LIMIT 3
     """, (topic_id, user_level))
 
     questions = cursor.fetchall()
+    conn.close()
 
     return render_template(
         "quiz.html",
@@ -332,6 +336,7 @@ def leaderboard():
         FROM users ORDER BY total_points DESC
     """)
     data = cursor.fetchall()
+    conn.close()
 
     return render_template("leaderboard.html", data=data)
 
