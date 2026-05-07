@@ -1,12 +1,120 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>⚔ Choose Your Mission</h2>
+<div class="animate-fade-in" style="max-width: 600px; margin: 0 auto; text-align: center;">
 
-{% for t in topics %}
-<div class="card">
-    <a href="/quiz/{{ t[0] }}"><b>{{ t[1] }}</b></a>
+    <div style="margin-bottom: 40px;">
+        <h1 style="font-size: 2.5rem; margin-bottom: 10px; color: var(--text-main);">
+            🌍 Learning Path
+        </h1>
+        <p class="text-muted" style="font-size: 1.1rem;">
+            Follow the path to master the topics. Tap a node to start a mission!
+        </p>
+    </div>
+
+    <!-- Confetti zone (triggered via JS if ?passed=1) -->
+    <canvas id="confetti-canvas" style="display:none;"></canvas>
+
+    <div class="path-container" style="padding-bottom: 80px;">
+        {% for topic in topics %}
+        {% set offset = loop.cycle('-50px', '50px', '-30px', '30px') %}
+
+        <div class="path-node-wrap"
+            style="position: relative; left: {{ offset }}; display: flex; flex-direction: column; align-items: center;">
+            <a href="{{ url_for('quiz', topic_id=topic.id) }}" class="path-node" style="
+                 {% if topic.difficulty == 'Beginner' %}
+                     background: var(--primary); box-shadow: 0 8px 0 var(--primary-dark);
+                     animation-delay: {{ loop.index0 * 0.4 }}s;
+                 {% elif topic.difficulty == 'Intermediate' %}
+                     background: var(--warning); box-shadow: 0 8px 0 var(--warning-dark);
+                     animation-delay: {{ loop.index0 * 0.4 }}s;
+                 {% else %}
+                     background: #CE82FF; box-shadow: 0 8px 0 #A855F7;
+                     animation-delay: {{ loop.index0 * 0.4 }}s;
+                 {% endif %}" onclick="window.playClick && window.playClick()">
+
+                {{ topic.icon }}
+
+                <div class="tooltip">
+                    <div style="font-size: 1.1rem; margin-bottom: 4px; color: var(--text-main);">{{ topic.name }}</div>
+                    <span class="badge
+                        {% if topic.difficulty == 'Beginner' %}badge-beginner
+                        {% elif topic.difficulty == 'Intermediate' %}badge-intermediate
+                        {% else %}badge-advanced{% endif %}">
+                        {{ topic.difficulty }}
+                    </span>
+                    <div class="tooltip-xp"><i class="fa-solid fa-bolt"></i> +{{ topic.xp }} XP</div>
+                </div>
+            </a>
+
+            <!-- Connector segment -->
+            {% if not loop.last %}
+            <div style="width: 6px; height: 35px; margin-top: 6px;
+                        background: repeating-linear-gradient(to bottom, #B8F28B 0px, #B8F28B 8px, transparent 8px, transparent 16px);
+                        border-radius: 4px; opacity: 0.8;">
+            </div>
+            {% endif %}
+        </div>
+
+        {% endfor %}
+
+        <!-- Goal trophy -->
+        <div
+            style="margin-top: 10px; font-size: 4rem; animation: float 3s ease-in-out infinite; filter: drop-shadow(0 4px 12px rgba(255,200,0,0.4));">
+            🏆</div>
+    </div>
 </div>
-{% endfor %}
 
+<script>
+    // Trigger confetti if arriving after a passed quiz
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('passed') === '1') {
+        startConfetti();
+        window.playWin && window.playWin();
+        setTimeout(stopConfetti, 4000);
+    }
+
+    function startConfetti() {
+        const canvas = document.getElementById('confetti-canvas');
+        canvas.style.display = 'block';
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const pieces = Array.from({ length: 120 }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * -canvas.height,
+            r: Math.random() * 8 + 4,
+            d: Math.random() * 3 + 1,
+            color: ['#58CC02', '#1CB0F6', '#FFC800', '#FF4B4B', '#CE82FF'][Math.floor(Math.random() * 5)],
+            tilt: Math.random() * 10 - 10,
+            tiltSpeed: Math.random() * 0.1 + 0.05
+        }));
+
+        let angle = 0;
+        let rafId;
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            angle += 0.01;
+            pieces.forEach(p => {
+                p.y += p.d + Math.cos(angle) * 0.5;
+                p.tilt += p.tiltSpeed;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.ellipse(p.x + p.tilt, p.y, p.r / 2, p.r, Math.PI / 4, 0, 2 * Math.PI);
+                ctx.fill();
+                if (p.y > canvas.height) { p.y = -20; p.x = Math.random() * canvas.width; }
+            });
+            rafId = requestAnimationFrame(draw);
+        }
+        draw();
+        canvas._rafId = rafId;
+    }
+
+    function stopConfetti() {
+        const canvas = document.getElementById('confetti-canvas');
+        cancelAnimationFrame(canvas._rafId);
+        canvas.style.display = 'none';
+    }
+</script>
 {% endblock %}

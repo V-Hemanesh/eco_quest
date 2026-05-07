@@ -1,22 +1,148 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>EcoQuest</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoQuest - Save the Planet!</title>
+    <meta name="description"
+        content="EcoQuest — the gamified environmental learning platform. Earn XP, unlock missions, and become an Eco Hero!">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main Style -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
 
-<div class="sidebar">
-    <h2>🌍 EcoQuest</h2>
-    <a href="{{ url_for('dashboard') }}">Game Hub</a>
-    <a href="{{ url_for('learning') }}">Mission Zone</a>
-    <a href="{{ url_for('topics') }}">Start Challenge</a>
-    <a href="{{ url_for('leaderboard') }}">Leaderboard</a>
-</div>
+    {% if session.get('user_id') %}
+    <!-- ========================
+     SIDEBAR
+     ======================== -->
+    <div class="sidebar animate-fade-in">
+        <h2>
+            <i class="fa-solid fa-leaf" style="color: var(--primary);"></i>
+            EcoQuest
+        </h2>
 
-<div class="main fade-in">
-    {% block content %}{% endblock %}
-</div>
+        <!-- XP + Streak mini strip -->
+        <div class="sidebar-stats">
+            <div class="sidebar-stat">
+                <i class="fa-solid fa-bolt icon-xp"></i>
+                <span id="sidebar-xp">{{ session.get('xp', '—') }} XP</span>
+            </div>
+            <div class="sidebar-stat">
+                <i class="fa-solid fa-fire icon-fire"></i>
+                <span>{{ session.get('streak', 1) }} Day{{ 's' if session.get('streak', 1) != 1 else '' }}</span>
+            </div>
+            <!-- Sound toggle -->
+            <button class="sound-toggle" id="sound-toggle-btn" title="Toggle sound">
+                <i class="fa-solid fa-volume-high" id="sound-icon"></i>
+            </button>
+        </div>
+
+        <div style="margin-bottom: 8px; padding-left: 15px;">
+            <small class="text-muted"
+                style="text-transform: uppercase; font-weight: 800; letter-spacing: 1px; font-size: 0.75rem;">Main
+                Menu</small>
+        </div>
+
+        <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' else '' }}">
+            <i class="fa-solid fa-gamepad"></i> Game Hub
+        </a>
+        <a href="{{ url_for('learning') }}" class="{{ 'active' if request.endpoint == 'learning' else '' }}">
+            <i class="fa-solid fa-book-open"></i> Mission Zone
+        </a>
+        <a href="{{ url_for('topics') }}" class="{{ 'active' if request.endpoint == 'topics' else '' }}">
+            <i class="fa-solid fa-bolt"></i> Start Challenge
+        </a>
+        <a href="{{ url_for('leaderboard') }}" class="{{ 'active' if request.endpoint == 'leaderboard' else '' }}">
+            <i class="fa-solid fa-trophy"></i> Leaderboard
+        </a>
+
+        <div style="margin-top: auto;">
+            <a href="/" style="color: var(--danger);">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content Area -->
+    <div class="{% if session.get('user_id') %}main{% endif %} animate-fade-in"
+        style="{% if not session.get('user_id') %}width: 100%; min-height: 100vh; display: flex; align-items: center; justify-content: center; margin-left: 0; padding: 20px;{% endif %}">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- ========================
+     GLOBAL SOUND ENGINE
+     ======================== -->
+    <script>
+        // Web Audio API — no external files needed
+        let soundEnabled = localStorage.getItem('ecoSoundEnabled') !== 'false';
+
+        const soundIcon = document.getElementById('sound-icon');
+        const soundBtn = document.getElementById('sound-toggle-btn');
+
+        function updateSoundIcon() {
+            if (!soundIcon) return;
+            soundIcon.className = soundEnabled
+                ? 'fa-solid fa-volume-high'
+                : 'fa-solid fa-volume-xmark';
+        }
+        updateSoundIcon();
+
+        if (soundBtn) {
+            soundBtn.addEventListener('click', () => {
+                soundEnabled = !soundEnabled;
+                localStorage.setItem('ecoSoundEnabled', soundEnabled);
+                updateSoundIcon();
+            });
+        }
+
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let ctx;
+
+        function getCtx() {
+            if (!ctx) ctx = new AudioCtx();
+            return ctx;
+        }
+
+        function playTone(freq, type, duration, vol = 0.18) {
+            if (!soundEnabled) return;
+            try {
+                const c = getCtx();
+                const o = c.createOscillator();
+                const g = c.createGain();
+                o.connect(g);
+                g.connect(c.destination);
+                o.type = type;
+                o.frequency.setValueAtTime(freq, c.currentTime);
+                g.gain.setValueAtTime(vol, c.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
+                o.start();
+                o.stop(c.currentTime + duration);
+            } catch (e) { }
+        }
+
+        // Exposed globally
+        window.playClick = () => playTone(440, 'sine', 0.08, 0.12);
+        window.playCorrect = () => {
+            playTone(523, 'sine', 0.15, 0.2);
+            setTimeout(() => playTone(659, 'sine', 0.15, 0.2), 120);
+            setTimeout(() => playTone(784, 'sine', 0.25, 0.2), 240);
+        };
+        window.playWrong = () => {
+            playTone(200, 'sawtooth', 0.15, 0.15);
+            setTimeout(() => playTone(160, 'sawtooth', 0.2, 0.15), 150);
+        };
+        window.playWin = () => {
+            [523, 659, 784, 1047].forEach((f, i) => {
+                setTimeout(() => playTone(f, 'sine', 0.3, 0.18), i * 100);
+            });
+        };
+    </script>
 
 </body>
+
 </html>

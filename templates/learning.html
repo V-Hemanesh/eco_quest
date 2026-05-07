@@ -1,13 +1,37 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>🎯 Mission Zone</h2>
+<div class="animate-fade-in" style="max-width: 900px; margin: 0 auto;">
 
-{% for t in topics %}
-<div class="card">
-    <h3>{{ t[0] }}</h3>
-    <p>{{ t[1] }}</p>
+    <div style="text-align: center; margin-bottom: 40px;">
+        <h1 style="font-size: 2.5rem; margin-bottom: 10px;"><i class="fa-solid fa-book-open text-gradient"></i> Mission
+            Briefings</h1>
+        <p class="text-muted" style="font-size: 1.1rem; max-width: 600px; margin: 0 auto;">Select a topic below to read
+            detailed information and prepare for your next challenge.</p>
+    </div>
+
+    <div class="grid grid-cols-2">
+        {% for topic in topics %}
+        <div class="card"
+            style="display: flex; flex-direction: column; height: 100%; border-left: 5px solid var(--primary);">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                <div
+                    style="width: 50px; height: 50px; background: rgba(16, 185, 129, 0.1); color: var(--primary); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                    <i class="fa-solid fa-file-lines"></i>
+                </div>
+                <h2 style="font-size: 1.4rem; color: var(--text-main); margin: 0;">{{ topic[1] }}</h2>
+            </div>
+
+            <p class="text-muted" style="flex-grow: 1; margin-bottom: 20px; line-height: 1.5; font-size: 0.95rem;">
+                {{ topic[2] | striptags | truncate(120) }}
+            </p>
+
+            <a href="{{ url_for('topic_detail', topic_id=topic[0]) }}" class="btn btn-secondary" style="width: 100%;">
+                Read Detailed Information <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
 </div>
-{% endfor %}
-
 {% endblock %}

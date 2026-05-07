@@ -1,75 +1,424 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="animate-fade-in" style="max-width: 800px; margin: 0 auto; padding-bottom: 120px;">
 
-<h2>🧠 Quiz Time</h2>
+    <!-- Top Bar: Progress + Timer + Hearts -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; gap: 16px;">
+        <div class="progress-container" style="flex-grow: 1; margin: 0; height: 18px;">
+            <div id="progress-bar" class="progress-bar" style="width: 0%;"></div>
+        </div>
 
-<!-- TIMER BAR -->
-<div id="timerBarContainer">
-    <div id="timerBar"></div>
+        <!-- Countdown Timer Ring -->
+        <div class="timer-ring" id="timer-ring">
+            <svg viewBox="0 0 44 44" width="44" height="44">
+                <circle class="ring-bg" cx="22" cy="22" r="18" />
+                <circle class="ring-progress" id="ring-progress" cx="22" cy="22" r="18" stroke-dasharray="113.1"
+                    stroke-dashoffset="0" />
+            </svg>
+            <div class="timer-text" id="timer-text">30</div>
+        </div>
+
+        <!-- Hearts -->
+        <div class="hearts-container" id="hearts-container">
+            <!-- Injected by JS -->
+        </div>
+    </div>
+
+    <!-- Question Area -->
+    <div id="question-area" style="text-align: center;">
+        <h2 id="question-text"
+            style="font-size: 1.9rem; margin-bottom: 40px; color: var(--text-main); line-height: 1.4;">
+            Loading...
+        </h2>
+        <div id="options-grid" class="grid grid-cols-2" style="text-align: left;"></div>
+    </div>
+
+    <!-- Hidden form for submission -->
+    <form id="quiz-form" method="POST" style="display: none;"></form>
+
+    <!-- Bottom feedback bar -->
+    <div id="bottom-bar" class="quiz-bottom-bar">
+        <div id="feedback-msg"
+            style="font-size: 1.4rem; font-weight: 800; display: flex; align-items: center; gap: 15px;">
+        </div>
+        <button id="action-btn" class="btn"
+            style="padding: 15px 40px; font-size: 1.2rem; min-width: 150px; opacity: 0.5; cursor: not-allowed;"
+            disabled>
+            CHECK
+        </button>
+    </div>
 </div>
-<h3>Level: {{ level }}</h3>
 
-<p id="timeText">Time: 30s</p>
-
-<form method="POST">
-
-{% for q in questions %}
-<div class="card fade-in">
-
-    <p><b>{{ loop.index }}. {{ q[0] }}</b></p>
-
-    <label class="option">
-        <input type="radio" name="q{{ loop.index0 }}" value="{{ q[1] }}" required>
-        {{ q[1] }}
-    </label>
-
-    <label class="option">
-        <input type="radio" name="q{{ loop.index0 }}" value="{{ q[2] }}">
-        {{ q[2] }}
-    </label>
-
-    <label class="option">
-        <input type="radio" name="q{{ loop.index0 }}" value="{{ q[3] }}">
-        {{ q[3] }}
-    </label>
-
-    <label class="option">
-        <input type="radio" name="q{{ loop.index0 }}" value="{{ q[4] }}">
-        {{ q[4] }}
-    </label>
-
-    <input type="hidden" name="correct{{ loop.index0 }}" value="{{ q[5] }}">
-
-</div>
-{% endfor %}
-
-<input type="hidden" name="total" value="{{ questions|length }}">
-
-<button type="submit">Submit Quiz 🚀</button>
-
-</form>
-
-<!-- TIMER SCRIPT -->
-<script>
-let time = 30;
-let bar = document.getElementById("timerBar");
-let text = document.getElementById("timeText");
-
-let interval = setInterval(() => {
-    time--;
-    text.innerText = "Time: " + time + "s";
-
-    bar.style.width = (time / 30 * 100) + "%";
-
-    if (time <= 5) bar.style.background = "red";
-
-    if (time <= 0) {
-        clearInterval(interval);
-        alert("Time's up!");
-        document.forms[0].submit();
+<style>
+    /* ---- Quiz option cards ---- */
+    .quiz-option {
+        padding: 20px;
+        border: 2.5px solid var(--border-color);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        font-size: 1.15rem;
+        font-weight: 600;
+        transition: border-color 0.15s, background 0.15s, transform 0.15s, box-shadow 0.15s;
+        text-align: center;
+        background: var(--surface);
+        box-shadow: 0 4px 0 var(--border-color);
+        user-select: none;
+        position: relative;
+        overflow: hidden;
     }
-}, 1000);
+
+    .quiz-option::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at center, rgba(255, 255, 255, 0.6) 0%, transparent 70%);
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .quiz-option:hover::after {
+        opacity: 1;
+    }
+
+    .quiz-option:hover {
+        background: #F7F7F7;
+        transform: translateY(-3px);
+        box-shadow: 0 7px 0 var(--border-color);
+    }
+
+    .quiz-option.selected {
+        border-color: var(--secondary);
+        background: #DDF4FF;
+        color: var(--secondary-dark);
+        box-shadow: 0 4px 0 var(--secondary);
+        transform: translateY(0);
+    }
+
+    .quiz-option.selected:hover {
+        transform: none;
+    }
+
+    .quiz-option.disabled {
+        pointer-events: none;
+        opacity: 0.85;
+    }
+
+    .quiz-option.correct-anim {
+        animation: correctPop 0.45s ease forwards;
+        border-color: var(--primary);
+        background: #D7FFB8;
+        box-shadow: 0 4px 0 var(--primary);
+    }
+
+    .quiz-option.wrong-anim {
+        animation: shake 0.5s ease forwards;
+        border-color: var(--danger);
+        background: #FFDFE0;
+    }
+
+    /* Slide-in question transition */
+    .slide-in {
+        animation: slideInRight 0.35s ease forwards;
+    }
+</style>
+
+<script>
+    const questionsData = {{ questions | tojson | safe }};
+    let currentIdx = 0;
+    let hearts = 3;
+    let userAnswers = [];
+    let selectedOption = null;
+    let state = "WAITING";
+    let timerInterval = null;
+    let timeLeft = 30;
+
+    const TIMER_CIRCUMFERENCE = 113.1; // 2 * π * 18
+
+    const els = {
+        progress: document.getElementById('progress-bar'),
+        heartsEl: document.getElementById('hearts-container'),
+        qText: document.getElementById('question-text'),
+        optsGrid: document.getElementById('options-grid'),
+        bottomBar: document.getElementById('bottom-bar'),
+        feedbackMsg: document.getElementById('feedback-msg'),
+        actionBtn: document.getElementById('action-btn'),
+        form: document.getElementById('quiz-form'),
+        ringProgress: document.getElementById('ring-progress'),
+        timerText: document.getElementById('timer-text'),
+    };
+
+    /* ---- Hearts ---- */
+    function updateHearts(lostIndex) {
+        let html = '';
+        for (let i = 0; i < 3; i++) {
+            if (i < hearts) {
+                html += `<i class="fa-solid fa-heart" style="color:var(--danger); display:inline-block;"></i>`;
+            } else {
+                html += `<i class="fa-solid fa-heart" style="color:#E5E5E5; display:inline-block;" id="dead-heart-${i}"></i>`;
+            }
+        }
+        els.heartsEl.innerHTML = html;
+
+        // Animate newly lost heart
+        if (lostIndex !== undefined) {
+            const lostEl = document.getElementById(`dead-heart-${lostIndex}`);
+            if (lostEl) {
+                lostEl.style.animation = 'heartLoss 0.5s ease forwards';
+            }
+        }
+    }
+
+    /* ---- Timer ---- */
+    function startTimer() {
+        clearInterval(timerInterval);
+        timeLeft = 30;
+        updateTimerUI();
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            updateTimerUI();
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                // Treat as wrong on time-out
+                if (state === 'WAITING' && questionsData.length > 0) {
+                    autoTimeOut();
+                }
+            }
+        }, 1000);
+    }
+
+    function updateTimerUI() {
+        if (!els.ringProgress || !els.timerText) return;
+        const fraction = timeLeft / 30;
+        const offset = TIMER_CIRCUMFERENCE * (1 - fraction);
+        els.ringProgress.style.strokeDashoffset = offset;
+        els.timerText.textContent = timeLeft;
+        // Turn red when under 10s
+        els.ringProgress.style.stroke = timeLeft <= 10 ? 'var(--danger)' : 'var(--secondary)';
+        els.timerText.style.color = timeLeft <= 10 ? 'var(--danger)' : 'var(--text-main)';
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+    }
+
+    function autoTimeOut() {
+        // Fake a wrong answer on timeout
+        state = 'CHECKED';
+        stopTimer();
+        const q = questionsData[currentIdx];
+        userAnswers.push({ qIdx: currentIdx, ans: '__timeout__', correct: q[5] });
+
+        hearts--;
+        updateHearts(hearts); // hearts already decremented
+
+        document.querySelectorAll('.quiz-option').forEach(n => {
+            n.classList.add('disabled');
+            if (n.textContent.trim() === q[5]) {
+                n.classList.add('correct-anim');
+            }
+        });
+
+        els.bottomBar.classList.add('incorrect');
+        els.feedbackMsg.innerHTML = `<i class="fa-solid fa-clock" style="font-size:2rem; color:var(--danger-dark);"></i>
+        <div style="display:flex;flex-direction:column;font-size:1rem;color:var(--danger-dark);">
+            <span style="font-weight:800;font-size:1.2rem;">Time's Up!</span>
+            <span>Correct answer: ${q[5]}</span>
+        </div>`;
+        els.actionBtn.textContent = 'GOT IT';
+        els.actionBtn.style.background = 'var(--danger)';
+        els.actionBtn.disabled = false;
+        els.actionBtn.style.opacity = '1';
+        els.actionBtn.style.cursor = 'pointer';
+
+        window.playWrong && window.playWrong();
+
+        if (hearts <= 0) {
+            setTimeout(finishQuiz, 1200);
+        }
+    }
+
+    /* ---- Load question ---- */
+    function loadQuestion() {
+        if (currentIdx >= questionsData.length || hearts <= 0) {
+            finishQuiz();
+            return;
+        }
+
+        state = 'WAITING';
+        selectedOption = null;
+        stopTimer();
+
+        els.bottomBar.className = 'quiz-bottom-bar';
+        els.feedbackMsg.innerHTML = '';
+        els.actionBtn.textContent = 'CHECK';
+        els.actionBtn.disabled = true;
+        els.actionBtn.style.opacity = '0.5';
+        els.actionBtn.style.cursor = 'not-allowed';
+        els.actionBtn.style.background = 'var(--primary)';
+
+        // Progress
+        els.progress.style.width = ((currentIdx / questionsData.length) * 100) + '%';
+
+        const q = questionsData[currentIdx];
+
+        // Slide-in question text
+        els.qText.classList.remove('slide-in');
+        void els.qText.offsetWidth; // reflow
+        els.qText.classList.add('slide-in');
+        els.qText.textContent = q[0];
+
+        // Build options with staggered delay
+        els.optsGrid.innerHTML = '';
+        const options = [q[1], q[2], q[3], q[4]];
+        options.forEach((opt, i) => {
+            const div = document.createElement('div');
+            div.className = 'quiz-option animate-fade-in';
+            div.style.animationDelay = (i * 0.07) + 's';
+            div.style.opacity = '0';
+            div.textContent = opt;
+            div.onclick = () => selectOption(div, opt);
+            els.optsGrid.appendChild(div);
+        });
+
+        startTimer();
+    }
+
+    /* ---- Select option ---- */
+    function selectOption(el, opt) {
+        if (state !== 'WAITING') return;
+        document.querySelectorAll('.quiz-option').forEach(n => n.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedOption = opt;
+        window.playClick && window.playClick();
+        els.actionBtn.disabled = false;
+        els.actionBtn.style.opacity = '1';
+        els.actionBtn.style.cursor = 'pointer';
+    }
+
+    /* ---- Particle burst ---- */
+    function spawnParticles(x, y) {
+        const colors = ['#58CC02', '#1CB0F6', '#FFC800', '#CE82FF', '#FF4B4B'];
+        for (let i = 0; i < 16; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            const angle = (i / 16) * 360;
+            const dist = 60 + Math.random() * 50;
+            const rad = angle * Math.PI / 180;
+            const tx = Math.cos(rad) * dist;
+            const ty = Math.sin(rad) * dist;
+            p.style.cssText = `
+            left: ${x}px; top: ${y}px;
+            background: ${colors[i % colors.length]};
+            --tx: translate(${tx}px, ${ty}px);
+            width: ${6 + Math.random() * 6}px;
+            height: ${6 + Math.random() * 6}px;
+        `;
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 800);
+        }
+    }
+
+    /* ---- Check answer ---- */
+    function checkAnswer() {
+        if (!selectedOption) return;
+        state = 'CHECKED';
+        stopTimer();
+
+        const q = questionsData[currentIdx];
+        const correct = q[5];
+        userAnswers.push({ qIdx: currentIdx, ans: selectedOption, correct });
+
+        // Disable all options
+        const allOpts = document.querySelectorAll('.quiz-option');
+        allOpts.forEach(n => {
+            n.classList.add('disabled');
+            if (n.textContent.trim() === correct) {
+                n.classList.add('correct-anim');
+            }
+        });
+
+        if (selectedOption === correct) {
+            // ✅ CORRECT
+            els.bottomBar.classList.add('correct');
+            els.feedbackMsg.innerHTML = `
+            <i class="fa-solid fa-circle-check" style="font-size:2.5rem; color:var(--primary-dark);"></i>
+            <span style="color:var(--primary-dark); font-size:1.4rem;">Excellent! 🎉</span>`;
+            els.actionBtn.textContent = 'CONTINUE';
+            els.actionBtn.style.background = 'var(--primary-dark)';
+            window.playCorrect && window.playCorrect();
+
+            // Particle burst from selected option
+            const selEl = Array.from(allOpts).find(n => n.textContent.trim() === selectedOption);
+            if (selEl) {
+                const r = selEl.getBoundingClientRect();
+                spawnParticles(r.left + r.width / 2, r.top + r.height / 2);
+            }
+
+        } else {
+            // ❌ WRONG
+            const lostHeart = hearts; // hearts not yet decremented — index of heart about to die
+            hearts--;
+            updateHearts(lostHeart - 1);
+
+            // Shake the wrong option
+            const wrongEl = Array.from(allOpts).find(n => n.textContent.trim() === selectedOption);
+            if (wrongEl) wrongEl.classList.add('wrong-anim');
+
+            els.bottomBar.classList.add('incorrect');
+            els.feedbackMsg.innerHTML = `
+            <i class="fa-solid fa-circle-xmark" style="font-size:2.5rem; color:var(--danger-dark);"></i>
+            <div style="display:flex;flex-direction:column;font-size:1rem;color:var(--danger-dark);">
+                <span style="font-weight:800;font-size:1.2rem;">Incorrect</span>
+                <span>Correct: <strong>${correct}</strong></span>
+            </div>`;
+            els.actionBtn.textContent = 'GOT IT';
+            els.actionBtn.style.background = 'var(--danger)';
+            window.playWrong && window.playWrong();
+
+            if (hearts <= 0) {
+                setTimeout(finishQuiz, 1200);
+                return;
+            }
+        }
+
+        els.actionBtn.disabled = false;
+        els.actionBtn.style.opacity = '1';
+        els.actionBtn.style.cursor = 'pointer';
+    }
+
+    /* ---- Action button ---- */
+    els.actionBtn.onclick = () => {
+        if (state === 'WAITING') {
+            checkAnswer();
+        } else if (state === 'CHECKED') {
+            currentIdx++;
+            loadQuestion();
+        }
+    };
+
+    /* ---- Finish quiz ---- */
+    function finishQuiz() {
+        stopTimer();
+        let html = `<input type="hidden" name="total" value="${questionsData.length}">`;
+        userAnswers.forEach(a => {
+            html += `<input type="hidden" name="q${a.qIdx}" value="${a.ans}">`;
+            html += `<input type="hidden" name="correct${a.qIdx}" value="${a.correct}">`;
+        });
+        // Pad unanswered questions
+        if (hearts <= 0) {
+            for (let i = currentIdx; i < questionsData.length; i++) {
+                html += `<input type="hidden" name="q${i}" value="">`;
+                html += `<input type="hidden" name="correct${i}" value="${questionsData[i][5]}">`;
+            }
+        }
+        els.form.innerHTML = html;
+        els.form.submit();
+    }
+
+    /* ---- Init ---- */
+    updateHearts();
+    loadQuestion();
 </script>
 
 {% endblock %}
