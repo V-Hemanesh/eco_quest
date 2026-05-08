@@ -131,6 +131,11 @@ def login():
 
     return render_template("login.html")
 
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
 def require_login():
     if "user_id" not in session:
         return redirect("/")
@@ -206,6 +211,9 @@ def dashboard():
 # LEARNING
 @app.route("/learning")
 def learning():
+    if "user_id" not in session:
+        return redirect("/")
+        
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -217,6 +225,9 @@ def learning():
 
 @app.route("/learning/<int:topic_id>")
 def topic_detail(topic_id):
+    if "user_id" not in session:
+        return redirect("/")
+        
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -281,6 +292,9 @@ from flask import request, render_template, redirect, session
 
 @app.route("/quiz/<int:topic_id>", methods=["GET", "POST"])
 def quiz(topic_id):
+    if "user_id" not in session:
+        return redirect("/")
+        
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -457,6 +471,9 @@ def buy_item(item_id):
 # LEADERBOARD
 @app.route("/leaderboard")
 def leaderboard():
+    if "user_id" not in session:
+        return redirect("/")
+        
     conn = get_connection()
     cursor = conn.cursor()
 
