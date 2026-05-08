@@ -146,6 +146,69 @@
         };
     </script>
 
+    <!-- ========================
+     ECO-BUDDY MASCOT
+     ======================== -->
+    <div class="mascot-container">
+        <div id="mascot-bubble" class="speech-bubble hidden">
+            <span id="mascot-text">Hello! I'm Eco-Buddy.</span>
+            <div style="text-align: right; margin-top: 5px;">
+                <button onclick="closeBubble()" style="background: none; border: none; color: var(--secondary); cursor: pointer; font-size: 0.8rem; font-weight: 900;">GOT IT!</button>
+            </div>
+        </div>
+        <img src="{{ url_for('static', filename='images/mascot.png') }}" class="mascot-img" id="mascot-sprite" onclick="toggleBubble()">
+    </div>
+
+    <script>
+        const mascotBubble = document.getElementById('mascot-bubble');
+        const mascotText = document.getElementById('mascot-text');
+        
+        const tips = {
+            'dashboard': "Welcome back! Check your daily quests to earn bonus Eco-Coins today! 🔥",
+            'learning': "Here are your missions! Read each briefing carefully to prepare for the quizzes. 📚",
+            'topics': "Ready for a challenge? Select a topic to test your knowledge! ⚡",
+            'shop': "Need a boost? You can buy Heart Refills here with your Eco-Coins! 💎",
+            'leaderboard': "See how you rank against other Eco-Warriors! Can you reach #1? 🏆",
+            'quiz': "Read every question carefully! You have 3 lives—use them wisely! ❤️"
+        };
+
+        function showGuide() {
+            const path = window.location.pathname;
+            let currentTip = "Click me anytime if you need help on your journey!";
+            
+            for (const key in tips) {
+                if (path.includes(key)) {
+                    currentTip = tips[key];
+                    break;
+                }
+            }
+            
+            mascotText.innerText = currentTip;
+            mascotBubble.classList.remove('hidden');
+            
+            // Auto-hide after 10 seconds
+            setTimeout(() => {
+                mascotBubble.classList.add('hidden');
+            }, 10000);
+        }
+
+        function toggleBubble() {
+            mascotBubble.classList.toggle('hidden');
+            if (!mascotBubble.classList.contains('hidden')) {
+                // Ensure correct text when manual toggle
+                showGuide();
+            }
+        }
+
+        function closeBubble() {
+            mascotBubble.classList.add('hidden');
+        }
+
+        // Show guide on page load (after 1s delay)
+        {% if session.get('user_id') %}
+        setTimeout(showGuide, 1500);
+        {% endif %}
+    </script>
 </body>
 
 </html>

@@ -729,16 +729,64 @@ h6 {
     align-items: center;
 }
 
-.badge-item {
+/* Mascot & Guide */
+.mascot-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 15px;
-    border-radius: var(--radius-md);
-    background: white;
-    border: 2px dashed var(--border-color);
+    align-items: flex-end;
+    pointer-events: none;
 }
+
+.mascot-img {
+    width: 120px;
+    height: auto;
+    animation: float-mascot 4s infinite ease-in-out;
+    pointer-events: auto;
+    cursor: pointer;
+    filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1));
+}
+
+.speech-bubble {
+    background: white;
+    border: 3px solid var(--secondary);
+    border-radius: 20px;
+    padding: 15px 20px;
+    margin-bottom: 15px;
+    max-width: 250px;
+    position: relative;
+    box-shadow: var(--shadow);
+    pointer-events: auto;
+    font-weight: 700;
+    color: var(--text-main);
+    transform-origin: bottom right;
+    animation: pop-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -15px;
+    right: 30px;
+    border-width: 15px 15px 0 0;
+    border-style: solid;
+    border-color: var(--secondary) transparent transparent transparent;
+}
+
+@keyframes float-mascot {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-15px) rotate(3deg); }
+}
+
+@keyframes pop-in {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.hidden { display: none; }
     position: relative;
     width: 44px;
     height: 44px;
