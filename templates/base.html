@@ -160,10 +160,73 @@
     </div>
 
     <script>
+        const mascotContainer = document.querySelector('.mascot-container');
         const mascotBubble = document.getElementById('mascot-bubble');
         const mascotText = document.getElementById('mascot-text');
         
+        // --- DRAGGABLE LOGIC ---
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        const dragStart = (e) => {
+            if (e.type === "touchstart") {
+                initialX = e.touches[0].clientX - xOffset;
+                initialY = e.touches[0].clientY - yOffset;
+            } else {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+            }
+
+            if (e.target.id === "mascot-sprite") {
+                isDragging = true;
+            }
+        };
+
+        const dragEnd = () => {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+        };
+
+        const drag = (e) => {
+            if (isDragging) {
+                e.preventDefault();
+
+                if (e.type === "touchmove") {
+                    currentX = e.touches[0].clientX - initialX;
+                    currentY = e.touches[0].clientY - initialY;
+                } else {
+                    currentX = e.clientX - initialX;
+                    currentY = e.clientY - initialY;
+                }
+
+                xOffset = currentX;
+                yOffset = currentY;
+
+                setTranslate(currentX, currentY, mascotContainer);
+            }
+        };
+
+        const setTranslate = (xPos, yPos, el) => {
+            el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+        };
+
+        window.addEventListener("touchstart", dragStart, false);
+        window.addEventListener("touchend", dragEnd, false);
+        window.addEventListener("touchmove", drag, false);
+
+        window.addEventListener("mousedown", dragStart, false);
+        window.addEventListener("mouseup", dragEnd, false);
+        window.addEventListener("mousemove", drag, false);
+
+        // --- TIPS LOGIC ---
         const tips = {
+
             'dashboard': "Welcome back! Check your daily quests to earn bonus Eco-Coins today! 🔥",
             'learning': "Here are your missions! Read each briefing carefully to prepare for the quizzes. 📚",
             'topics': "Ready for a challenge? Select a topic to test your knowledge! ⚡",

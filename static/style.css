@@ -744,10 +744,15 @@ h6 {
 .mascot-img {
     width: 120px;
     height: auto;
-    animation: float-mascot 4s infinite ease-in-out;
+    animation: float-mascot 4s infinite ease-in-out, breathe 3s infinite ease-in-out;
     pointer-events: auto;
-    cursor: pointer;
+    cursor: grab;
     filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1));
+    transition: transform 0.1s;
+}
+
+.mascot-img:active {
+    cursor: grabbing;
 }
 
 .speech-bubble {
@@ -935,18 +940,14 @@ h6 {
 }
 
 /* Path node heartbeat pulse */
-@keyframes nodePulse {
+@keyframes breathe {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1)); }
+    50% { transform: scale(1.05); filter: drop-shadow(0 15px 25px rgba(88, 204, 2, 0.3)); }
+}
 
-    0%,
-    100% {
-        transform: scale(1);
-        box-shadow: 0 8px 0 var(--primary-dark);
-    }
-
-    50% {
-        transform: scale(1.06);
-        box-shadow: 0 10px 20px rgba(88, 204, 2, 0.4);
-    }
+@keyframes blink {
+    0%, 90%, 100% { opacity: 1; }
+    95% { opacity: 0.8; }
 }
 
 /* Slide up (stagger entrance) */
