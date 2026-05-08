@@ -742,13 +742,17 @@ h6 {
 }
 
 .mascot-img {
-    width: 120px;
-    height: auto;
-    animation: float-mascot 4s infinite ease-in-out, breathe 3s infinite ease-in-out;
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    mix-blend-mode: multiply; /* Makes pure white background transparent */
+    animation: float-mascot 4s infinite ease-in-out, breathe 3s infinite ease-in-out, blink 5s infinite;
     pointer-events: auto;
     cursor: grab;
-    filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1));
+    filter: drop-shadow(0 5px 10px rgba(0,0,0,0.05));
     transition: transform 0.1s;
+    margin: 0;
+    padding: 0;
 }
 
 .mascot-img:active {
