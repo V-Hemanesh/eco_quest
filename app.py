@@ -252,40 +252,22 @@ def topics():
         return check
 
     user_id = session["user_id"]
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT topic_id, topic_name, icon, description FROM topics")
+    rows = cursor.fetchall()
+    conn.close()
 
-    topics_data = [
-        {
-            "id": 1,
-            "name": "Pollution",
-            "desc": "Learn about different types of pollution and how they affect nature.",
-            "xp": 50,
-            "icon": "🏭"
-        },
-        {
-            "id": 2,
-            "name": "Recycling",
-            "desc": "Understand waste management and sustainable reuse.",
-            "xp": 80,
-            "icon": "♻️"
-        },
-        {
-            "id": 3,
-            "name": "Climate Change",
-            "desc": "Explore global warming, greenhouse gases, and solutions.",
-            "xp": 120,
-            "icon": "🔥"
-        },
-        {
-           "id": 4,
-           "name": "Water Conservation",
-           "desc": "Learn how to protect and efficiently use water resources.",
-           "xp": 90,
-           "icon": "💧"
-        }
-    ]
-
-    for t in topics_data:
-        t["difficulty"] = get_user_level(user_id, t["id"])
+    topics_data = []
+    for row in rows:
+        topics_data.append({
+            "id": row[0],
+            "name": row[1],
+            "icon": row[2],
+            "desc": row[3],
+            "difficulty": get_user_level(user_id, row[0])
+        })
 
     return render_template("topics.html", topics=topics_data)
 
