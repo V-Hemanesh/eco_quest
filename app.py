@@ -84,6 +84,9 @@ def check_achievements(user_id):
 # LOGIN
 @app.route("/", methods=["GET", "POST"])
 def login():
+    if "user_id" in session:
+        return redirect("/dashboard")
+        
     if request.method == "POST":
         action = request.form.get("action")
 
