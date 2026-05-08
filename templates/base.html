@@ -56,6 +56,9 @@
         <a href="{{ url_for('topics') }}" class="{{ 'active' if request.endpoint == 'topics' else '' }}">
             <i class="fa-solid fa-bolt"></i> Start Challenge
         </a>
+        <a href="{{ url_for('shop') }}" class="{{ 'active' if request.endpoint == 'shop' else '' }}">
+            <i class="fa-solid fa-cart-shopping"></i> Eco-Shop
+        </a>
         <a href="{{ url_for('leaderboard') }}" class="{{ 'active' if request.endpoint == 'leaderboard' else '' }}">
             <i class="fa-solid fa-trophy"></i> Leaderboard
         </a>

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="animate-fade-in" style="max-width: 1000px; margin: 0 auto;">
+
+    <!-- Shop Header -->
+    <div style="text-align: center; margin-bottom: 40px; background: white; padding: 40px; border-radius: var(--radius-lg); border-bottom: 6px solid var(--border-color);">
+        <h1 style="font-size: 2.5rem; margin-bottom: 10px;">
+            <i class="fa-solid fa-store" style="color: var(--secondary);"></i> Eco-Shop
+        </h1>
+        <p class="text-muted" style="font-size: 1.1rem;">Spend your hard-earned coins on power-ups and items.</p>
+        
+        <div style="display: inline-flex; align-items: center; gap: 10px; background: #FFF9E5; padding: 10px 25px; border-radius: 30px; margin-top: 20px; border: 2px solid #FFE69C;">
+            <i class="fa-solid fa-coins" style="color: var(--coin-gold); font-size: 1.5rem;"></i>
+            <span style="font-size: 1.5rem; font-weight: 900; color: #CC9900;">{{ coins }}</span>
+        </div>
+    </div>
+
+    <!-- Inventory Preview -->
+    <div style="margin-bottom: 40px; display: flex; gap: 20px; align-items: center; background: rgba(0,0,0,0.02); padding: 20px; border-radius: var(--radius-md);">
+        <div style="font-weight: 800; color: var(--text-muted); text-transform: uppercase; font-size: 0.8rem;">Your Inventory:</div>
+        {% for item_type, qty in inventory.items() %}
+        <div style="background: white; padding: 5px 15px; border-radius: 20px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px; font-weight: 700;">
+            <span>{{ "❤️" if item_type == 'heart_refill' else "❄️" if item_type == 'streak_freeze' else "⚡" }}</span>
+            <span>x{{ qty }}</span>
+        </div>
+        {% endfor %}
+        {% if not inventory %}
+            <span class="text-muted" style="font-size: 0.9rem;">Your inventory is empty.</span>
+        {% endif %}
+    </div>
+
+    <!-- Shop Items Grid -->
+    <div class="shop-grid">
+        {% for item in items %}
+        <div class="shop-card">
+            <div class="item-icon">{{ item.icon }}</div>
+            <h3 style="margin-bottom: 10px;">{{ item.name }}</h3>
+            <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 20px; height: 40px;">{{ item.desc }}</p>
+            
+            <div class="item-price">
+                <i class="fa-solid fa-coins" style="color: var(--coin-gold);"></i>
+                {{ item.price }}
+            </div>
+            
+            {% if coins >= item.price %}
+                <a href="{{ url_for('buy_item', item_id=item.id) }}" class="btn" style="width: 100%; text-decoration: none;">BUY NOW</a>
+            {% else %}
+                <button class="btn btn-secondary" style="width: 100%; cursor: not-allowed; opacity: 0.6;" disabled>NOT ENOUGH COINS</button>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Special Offers / Footer -->
+    <div style="margin-top: 60px; text-align: center; padding: 40px; background: var(--bg-sidebar); border-radius: var(--radius-lg);">
+        <h3><i class="fa-solid fa-gift"></i> New items coming soon!</h3>
+        <p class="text-muted">Keep completing lessons to earn more coins for exclusive rewards.</p>
+    </div>
+
+</div>
+{% endblock %}

@@ -2,15 +2,18 @@
 
 :root {
     --primary: #58CC02;
-    --primary-dark: #58A700;
+    --primary-dark: #46a302;
     --primary-light: #89E219;
     --secondary: #1CB0F6;
-    --secondary-dark: #1899D6;
+    --secondary-dark: #1899d6;
+    --accent: #FFC800;
     --danger: #FF4B4B;
     --danger-dark: #EA2B2B;
     --background: #FFFFFF;
+    --bg-light: #FFFFFF;
+    --bg-sidebar: #F7F7F7;
     --surface: #FFFFFF;
-    --text-main: #4B4B4B;
+    --text-main: #3C3C3C;
     --text-muted: #777777;
     --warning: #FFC800;
     --warning-dark: #D3A600;
@@ -18,10 +21,14 @@
     --glass-bg: rgba(255, 255, 255, 0.9);
     --glass-border: rgba(255, 255, 255, 0.4);
     --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-    --radius-lg: 24px;
+    --radius-lg: 20px;
     --radius-md: 16px;
-    --radius-sm: 8px;
+    --radius-sm: 12px;
     --transition: all 0.2s ease-in-out;
+    --font-main: 'Nunito', sans-serif;
+    --shadow: 0 4px 15px rgba(0,0,0,0.05);
+    --coin-gold: #FFD700;
+    --streak-fire: #FF4500;
 }
 
 * {
@@ -627,9 +634,111 @@ h6 {
     font-size: 1.5rem;
 }
 
+/* Gamification Components */
+.stat-widget {
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 4px 0 var(--border-color);
+    transition: transform 0.2s;
+}
 
-/* Timer ring */
-.timer-ring {
+.stat-widget:hover {
+    transform: translateY(-2px);
+}
+
+.stat-icon {
+    font-size: 2rem;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.03);
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--text-main);
+}
+
+.streak-fire { color: var(--streak-fire); }
+.coin-gold { color: var(--coin-gold); }
+.star-accent { color: var(--accent); }
+
+/* Shop Cards */
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.shop-card {
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 25px;
+    text-align: center;
+    box-shadow: 0 6px 0 var(--border-color);
+    transition: all 0.2s;
+}
+
+.shop-card:hover {
+    transform: scale(1.02);
+}
+
+.item-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+.item-price {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #FFF9E5;
+    padding: 5px 15px;
+    border-radius: 20px;
+    color: #CC9900;
+    font-weight: 800;
+    margin-bottom: 15px;
+}
+
+/* Quest Items */
+.quest-item {
+    padding: 15px;
+    border-radius: var(--radius-md);
+    background: #F7F7F7;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.badge-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 15px;
+    border-radius: var(--radius-md);
+    background: white;
+    border: 2px dashed var(--border-color);
+}
     position: relative;
     width: 44px;
     height: 44px;

@@ -1,199 +1,75 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- Confetti canvas (pass only) -->
-<canvas id="confetti-canvas"></canvas>
+<!-- Confetti Library -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-<div class="animate-fade-in" style="display: flex; align-items: center; justify-content: center; min-height: 80vh;">
-    <div class="card" style="max-width: 620px; width: 100%; text-align: center; padding: 50px 40px; position: relative; overflow: hidden;">
+<div class="animate-fade-in" style="max-width: 600px; margin: 60px auto; text-align: center;">
 
-        {% if is_pass %}
-            <!-- Trophy bounce-in -->
-            <div style="font-size: 7rem; color: var(--warning); margin-bottom: 20px;
-                        animation: bounceIn 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards, float 2.5s 0.8s ease-in-out infinite;">
-                <i class="fa-solid fa-trophy"></i>
-            </div>
-            <h1 style="font-size: 2.8rem; color: var(--primary-dark); margin-bottom: 10px; animation: bounceIn 0.6s 0.2s both;">
-                Mission Passed! 🎉
-            </h1>
-        {% else %}
-            <div style="font-size: 7rem; color: var(--danger); margin-bottom: 20px; opacity: 0.85;
-                        animation: bounceIn 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards;">
-                <i class="fa-solid fa-circle-xmark"></i>
-            </div>
-            <h1 style="font-size: 2.5rem; color: var(--text-main); margin-bottom: 10px; animation: bounceIn 0.6s 0.2s both;">
-                Mission Failed
-            </h1>
-        {% endif %}
+    <div class="card" style="padding: 50px; border-top: 10px solid {{ 'var(--primary)' if is_pass else 'var(--danger)' }};">
+        
+        <div style="font-size: 5rem; margin-bottom: 20px;">
+            {{ "🎉" if is_pass else "❌" }}
+        </div>
 
-        <h3 style="font-size: 1.3rem; margin-bottom: 30px; color: var(--text-muted); animation: fadeIn 0.5s 0.4s both;">
-            {{ message }}
-        </h3>
+        <h1 style="font-size: 2.5rem; margin-bottom: 10px;">{{ message }}</h1>
+        <p class="text-muted" style="font-size: 1.2rem; margin-bottom: 40px;">
+            You scored <strong>{{ score }}</strong> out of <strong>{{ total }}</strong>.
+        </p>
 
-        <!-- Score box -->
-        <div style="background: #F8FAFC; padding: 28px; border-radius: var(--radius-md); margin-bottom: 28px;
-                    border: 2px solid var(--border-color); animation: fadeIn 0.5s 0.5s both;">
-            <div style="font-size: 1.1rem; margin-bottom: 18px; color: var(--text-muted);">
-                Score: <strong id="score-display" style="font-size: 2rem; color: var(--text-main);">0</strong>
-                <span style="font-size: 1.5rem; color: var(--text-main);"> / {{ total }}</span>
-            </div>
-
-            <!-- Stars row -->
-            <div id="stars-row" style="font-size: 2.2rem; margin-bottom: 18px; display: flex; justify-content: center; gap: 8px; min-height: 2.5rem;">
-                {% for i in range(total) %}
-                <span class="result-star" style="animation-delay: {{ 0.6 + i * 0.15 }}s; color: {% if i < score %}var(--warning){% else %}#E5E5E5{% endif %};">
-                    &#9733;
-                </span>
-                {% endfor %}
-            </div>
-
-            <!-- XP + Stars gained -->
-            <div style="display: flex; justify-content: center; gap: 30px;">
-                <div style="text-align: center;">
-                    <div style="font-size: 2rem; color: var(--secondary);"><i class="fa-solid fa-bolt"></i></div>
-                    <div style="font-weight: 800; font-size: 1.3rem;" id="xp-display">+0 XP</div>
+        <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 40px;">
+            <div class="stat-widget" style="min-width: 150px; justify-content: center;">
+                <div>
+                    <div class="stat-label">XP Gained</div>
+                    <div class="stat-value" style="color: var(--secondary);">+{{ xp_gain }}</div>
                 </div>
-                {% if is_pass %}
-                <div style="text-align: center;">
-                    <div style="font-size: 2rem; color: var(--warning);"><i class="fa-solid fa-star"></i></div>
-                    <div style="font-weight: 800; font-size: 1.3rem;" id="stars-display">+0 Stars</div>
+            </div>
+            <div class="stat-widget" style="min-width: 150px; justify-content: center;">
+                <div>
+                    <div class="stat-label">Eco-Coins</div>
+                    <div class="stat-value" style="color: var(--coin-gold);">+{{ coin_gain }}</div>
                 </div>
-                {% endif %}
             </div>
         </div>
 
-        <!-- Action buttons -->
-        <div style="display: flex; justify-content: center; gap: 15px; animation: fadeIn 0.5s 0.8s both; flex-wrap: wrap;">
-            <a href="{{ url_for('topics') }}{% if is_pass %}?passed=1{% endif %}" class="btn btn-secondary">
-                <i class="fa-solid fa-list"></i> More Missions
+        <div style="display: flex; flex-direction: column; gap: 15px;">
+            <a href="{{ url_for('quiz', topic_id=topic_id) }}" class="btn {{ 'btn-secondary' if is_pass else '' }}" style="width: 100%;">
+                {{ "Try Again" if not is_pass else "Replay Mission" }}
             </a>
-            {% if is_pass and score < total %}
-            <a href="{{ url_for('quiz', topic_id=topic_id) }}" class="btn">
-                Next Level <i class="fa-solid fa-arrow-right"></i>
+            <a href="{{ url_for('topics') }}" class="btn" style="width: 100%;">
+                Back to Path <i class="fa-solid fa-map"></i>
             </a>
-            {% elif not is_pass %}
-            <a href="{{ url_for('quiz', topic_id=topic_id) }}" class="btn">
-                <i class="fa-solid fa-rotate-right"></i> Try Again
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary" style="width: 100%;">
+                View Dashboard <i class="fa-solid fa-gamepad"></i>
             </a>
-            {% else %}
-            <a href="{{ url_for('dashboard') }}" class="btn">
-                Go to Hub <i class="fa-solid fa-house"></i>
-            </a>
-            {% endif %}
         </div>
-
     </div>
+
 </div>
 
+{% if is_pass %}
 <script>
-const isPass   = {{ 'true' if is_pass else 'false' }};
-const finalScore = {{ score }};
-const total      = {{ total }};
-const xpGain     = {{ xp_gain }};
+    // Trigger confetti on success
+    var duration = 3 * 1000;
+    var animationEnd = Date.now() + duration;
+    var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
 
-/* ---- Animated score counter ---- */
-function animateCount(el, from, to, suffix, duration) {
-    const start = performance.now();
-    function step(now) {
-        const elapsed = now - start;
-        const progress = Math.min(elapsed / duration, 1);
-        // ease-out cubic
-        const eased = 1 - Math.pow(1 - progress, 3);
-        el.textContent = Math.round(from + (to - from) * eased) + suffix;
-        if (progress < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-}
-
-/* ---- XP fly-up ---- */
-function flyUpXP(amount, x, y) {
-    const el = document.createElement('div');
-    el.className = 'xp-flyup';
-    el.textContent = '+' + amount + ' XP';
-    el.style.left = x + 'px';
-    el.style.top  = y + 'px';
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 1400);
-}
-
-/* ---- Confetti ---- */
-function startConfetti() {
-    const canvas = document.getElementById('confetti-canvas');
-    const ctx    = canvas.getContext('2d');
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const pieces = Array.from({length: 150}, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * -200 - 20,
-        r: Math.random() * 9 + 4,
-        d: Math.random() * 3 + 1.5,
-        color: ['#58CC02','#1CB0F6','#FFC800','#FF4B4B','#CE82FF','#FFFFFF'][Math.floor(Math.random()*6)],
-        tilt: Math.random() * 10 - 5,
-        tiltSpeed: Math.random() * 0.1 + 0.04
-    }));
-    let angle = 0, rafId;
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        angle += 0.01;
-        pieces.forEach(p => {
-            p.y += p.d + Math.cos(angle) * 0.7;
-            p.tilt += p.tiltSpeed;
-            ctx.fillStyle = p.color;
-            ctx.beginPath();
-            ctx.ellipse(p.x + Math.sin(p.tilt) * 5, p.y, p.r / 2, p.r, Math.PI / 4, 0, 2 * Math.PI);
-            ctx.fill();
-            if (p.y > canvas.height) { p.y = -20; p.x = Math.random() * canvas.width; }
-        });
-        rafId = requestAnimationFrame(draw);
-        canvas._rafId = rafId;
-    }
-    draw();
-    setTimeout(() => {
-        cancelAnimationFrame(canvas._rafId);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }, 5000);
-}
-
-/* ---- Init on load ---- */
-window.addEventListener('DOMContentLoaded', () => {
-    // Score counter
-    setTimeout(() => {
-        animateCount(document.getElementById('score-display'), 0, finalScore, '', 900);
-    }, 500);
-
-    // XP counter
-    if (xpGain > 0) {
-        setTimeout(() => {
-            animateCount(document.getElementById('xp-display'), 0, xpGain, ' XP', 900, true);
-            // Prefix the +
-            const xpEl = document.getElementById('xp-display');
-            setTimeout(() => { xpEl.textContent = '+' + xpEl.textContent; }, 950);
-
-            // XP fly-up from xp display element
-            const xpBox = document.getElementById('xp-display');
-            const r = xpBox.getBoundingClientRect();
-            flyUpXP(xpGain, r.left + r.width / 2, r.top);
-        }, 700);
-    } else {
-        document.getElementById('xp-display').textContent = '+0 XP';
+    function randomInRange(min, max) {
+      return Math.random() * (max - min) + min;
     }
 
-    // Stars counter
-    const starsEl = document.getElementById('stars-display');
-    if (starsEl && finalScore > 0) {
-        setTimeout(() => {
-            animateCount(starsEl, 0, finalScore, ' Stars', 900);
-            setTimeout(() => { starsEl.textContent = '+' + starsEl.textContent; }, 950);
-        }, 850);
-    }
+    var interval = setInterval(function() {
+      var timeLeft = animationEnd - Date.now();
 
-    // Confetti on pass
-    if (isPass) {
-        setTimeout(() => {
-            startConfetti();
-            window.playWin && window.playWin();
-        }, 300);
-    }
-});
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      var particleCount = 50 * (timeLeft / duration);
+      // since particles fall down, start a bit higher than random
+      confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+      confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+    }, 250);
 </script>
+{% endif %}
 {% endblock %}
