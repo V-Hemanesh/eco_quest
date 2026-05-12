@@ -18,6 +18,8 @@ def init_db():
     cols = [c[1] for c in cursor.fetchall()]
     if "mascot_level" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN mascot_level INTEGER DEFAULT 1")
     if "league_id" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN league_id INTEGER DEFAULT 1")
+    cursor.execute("UPDATE users SET league_id = 1 WHERE league_id IS NULL")
+    cursor.execute("UPDATE users SET mascot_level = 1 WHERE mascot_level IS NULL")
     if "max_combo" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN max_combo INTEGER DEFAULT 0")
     if "stars" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN stars INTEGER DEFAULT 0")
     if "eco_coins" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN eco_coins INTEGER DEFAULT 0")
@@ -250,11 +252,15 @@ def dashboard():
     cursor.execute("""
         SELECT u.name, u.total_points, u.level_name, u.stars, u.eco_coins, u.current_streak, u.mascot_level, l.name, l.icon
         FROM users u 
-        JOIN leagues l ON u.league_id = l.league_id
+        LEFT JOIN leagues l ON u.league_id = l.league_id
         WHERE u.user_id=?
     """, (user_id,))
     user_row = cursor.fetchone()
     
+    if not user_row:
+        session.clear()
+        return redirect("/")
+        
     update_league(user_id, user_row[1])
     check_achievements(user_id)
     notifications = get_notifications(user_id)
