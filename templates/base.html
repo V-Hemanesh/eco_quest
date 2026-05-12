@@ -153,7 +153,7 @@
         <div id="mascot-bubble" class="speech-bubble hidden">
             <span id="mascot-text">Hello! I'm Eco-Buddy.</span>
             <div style="text-align: right; margin-top: 5px;">
-                <button onclick="closeBubble()" style="background: var(--secondary); border: none; color: white; cursor: pointer; font-size: 0.8rem; font-weight: 900; padding: 5px 15px; border-radius: 10px; pointer-events: auto; display: inline-block;">GOT IT!</button>
+                <button onclick="closeBubble()" class="mascot-close-btn">GOT IT!</button>
             </div>
         </div>
         <img src="{{ url_for('static', filename='images/' + session.get('mascot_img', 'mascot.png')) }}" class="mascot-img" id="mascot-sprite" onclick="toggleBubble()">
