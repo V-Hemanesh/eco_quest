@@ -150,13 +150,13 @@
      ECO-BUDDY MASCOT
      ======================== -->
     <div class="mascot-container">
+        <img src="{{ url_for('static', filename='images/' + session.get('mascot_img', 'mascot.png')) }}" class="mascot-img" id="mascot-sprite" onclick="toggleBubble()">
         <div id="mascot-bubble" class="speech-bubble hidden">
             <span id="mascot-text">Hello! I'm Eco-Buddy.</span>
             <div style="text-align: right; margin-top: 5px;">
-                <button onclick="closeBubble()" style="background: none; border: none; color: var(--secondary); cursor: pointer; font-size: 0.8rem; font-weight: 900;">GOT IT!</button>
+                <button onclick="closeBubble()" style="background: none; border: none; color: var(--secondary); cursor: pointer; font-size: 0.8rem; font-weight: 900; pointer-events: auto;">GOT IT!</button>
             </div>
         </div>
-        <img src="{{ url_for('static', filename='images/' + session.get('mascot_img', 'mascot.png')) }}" class="mascot-img" id="mascot-sprite" onclick="toggleBubble()">
     </div>
 
     <script>
