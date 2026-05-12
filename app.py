@@ -8,41 +8,80 @@ app.secret_key = "secret123"
 
 def get_connection():
     return sqlite3.connect("database.db")
-
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Ensure users table has new columns
+    # 👤 Users Table Schema Upgrades
+    cursor.execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, usn TEXT, password TEXT, total_points INTEGER, level_name TEXT, stars INTEGER, eco_coins INTEGER DEFAULT 0, mascot_level INTEGER DEFAULT 1, league_id INTEGER DEFAULT 1, current_streak INTEGER DEFAULT 0, last_active_date TEXT, streak_freeze_active INTEGER DEFAULT 0, max_combo INTEGER DEFAULT 0)")
+    
     cursor.execute("PRAGMA table_info(users)")
     cols = [c[1] for c in cursor.fetchall()]
-    if "mascot_level" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN mascot_level INTEGER DEFAULT 1")
-    if "league_id" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN league_id INTEGER DEFAULT 1")
-    cursor.execute("UPDATE users SET league_id = 1 WHERE league_id IS NULL")
-    cursor.execute("UPDATE users SET mascot_level = 1 WHERE mascot_level IS NULL")
-    if "max_combo" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN max_combo INTEGER DEFAULT 0")
-    if "stars" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN stars INTEGER DEFAULT 0")
-    if "eco_coins" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN eco_coins INTEGER DEFAULT 0")
-    if "current_streak" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN current_streak INTEGER DEFAULT 0")
-    if "last_active_date" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN last_active_date TEXT")
-    if "streak_freeze_active" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN streak_freeze_active INTEGER DEFAULT 0")
-    
-    # Ensure leagues table exists and is populated
+    # Auto-add missing columns for existing users
+    new_cols = [
+        ("eco_coins", "INTEGER DEFAULT 0"),
+        ("mascot_level", "INTEGER DEFAULT 1"),
+        ("league_id", "INTEGER DEFAULT 1"),
+        ("current_streak", "INTEGER DEFAULT 0"),
+        ("last_active_date", "TEXT"),
+        ("streak_freeze_active", "INTEGER DEFAULT 0"),
+        ("max_combo", "INTEGER DEFAULT 0"),
+        ("stars", "INTEGER DEFAULT 0")
+    ]
+    for col_name, col_type in new_cols:
+        if col_name not in cols:
+            cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
+
+    # 🏆 Leagues & Achievements
     cursor.execute("CREATE TABLE IF NOT EXISTS leagues (league_id INTEGER PRIMARY KEY, name TEXT, min_xp INTEGER, icon TEXT)")
     cursor.execute("SELECT COUNT(*) FROM leagues")
     if cursor.fetchone()[0] == 0:
         leagues = [(1, "Bronze League", 0, "🥉"), (2, "Silver League", 500, "🥈"), (3, "Gold League", 1500, "🥇"), (4, "Emerald League", 3000, "💎"), (5, "Titan League", 5000, "👑")]
         cursor.executemany("INSERT INTO leagues VALUES (?,?,?,?)", leagues)
-        
-    # Ensure notifications table
+
+    cursor.execute("CREATE TABLE IF NOT EXISTS achievements (achievement_id INTEGER PRIMARY KEY, name TEXT, icon TEXT, description TEXT)")
+    cursor.execute("SELECT COUNT(*) FROM achievements")
+    if cursor.fetchone()[0] == 0:
+        achievements = [
+            (1, "Early Bird", "🌅", "Join the EcoQuest journey"),
+            (2, "Master Learner", "🧠", "Complete 5 different topics"),
+            (3, "Streak Warrior", "🔥", "Maintain a 3-day streak"),
+            (4, "Eco Millionaire", "💰", "Earn 500 Eco-Coins"),
+            (5, "Nature Guardian", "🛡️", "Reach Titan League")
+        ]
+        cursor.executemany("INSERT INTO achievements VALUES (?,?,?,?)", achievements)
+
+    # 📈 Progress & Notifications
+    cursor.execute("CREATE TABLE IF NOT EXISTS user_progress (user_id INTEGER, topic_id INTEGER, level_name TEXT, PRIMARY KEY(user_id, topic_id))")
+    cursor.execute("CREATE TABLE IF NOT EXISTS user_achievements (user_id INTEGER, achievement_id INTEGER, date_unlocked TEXT, PRIMARY KEY(user_id, achievement_id))")
     cursor.execute("CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, message TEXT, is_read INTEGER DEFAULT 0, date_sent TEXT)")
     
-    # Ensure topics has icon/desc
-    cursor.execute("PRAGMA table_info(topics)")
-    tcols = [c[1] for c in cursor.fetchall()]
-    if "icon" not in tcols: cursor.execute("ALTER TABLE topics ADD COLUMN icon TEXT")
-    if "description" not in tcols: cursor.execute("ALTER TABLE topics ADD COLUMN description TEXT")
-    
+    # 🛒 Shop & Quests
+    cursor.execute("CREATE TABLE IF NOT EXISTS user_inventory (user_id INTEGER, item_type TEXT, quantity INTEGER, PRIMARY KEY(user_id, item_type))")
+    cursor.execute("CREATE TABLE IF NOT EXISTS daily_quests (quest_id INTEGER PRIMARY KEY, description TEXT, coin_reward INTEGER)")
+    cursor.execute("SELECT COUNT(*) FROM daily_quests")
+    if cursor.fetchone()[0] == 0:
+        quests = [(1, "Complete 1 Quiz today", 20), (2, "Earn 50 XP in one session", 50), (3, "Maintain your streak", 30)]
+        cursor.executemany("INSERT INTO daily_quests VALUES (?,?,?)", quests)
+
+    # 🗺️ Topics Seed Data
+    cursor.execute("CREATE TABLE IF NOT EXISTS topics (topic_id INTEGER PRIMARY KEY, topic_name TEXT, content TEXT, icon TEXT, description TEXT)")
+    cursor.execute("SELECT COUNT(*) FROM topics")
+    if cursor.fetchone()[0] == 0:
+        topics_seed = [
+            (1, "Biodiversity", "Protecting the variety of life...", "🦁", "Web of life."),
+            (2, "Waste Management", "Reduce, Reuse, Recycle...", "♻️", "Zero waste."),
+            (3, "Renewable Energy", "Solar, Wind, Hydro...", "☀️", "Clean energy."),
+            (4, "Water Conservation", "Every drop counts...", "💧", "Save water."),
+            (5, "Climate Change", "Understanding warming...", "🌍", "Fight warming."),
+            (6, "Ocean Health", "Protecting reefs...", "🌊", "Ocean preservation."),
+            (7, "Sustainable Food", "Farming the future...", "🥗", "Eat green."),
+            (8, "Urban Greening", "Nature in cities...", "🏙️", "City gardens."),
+            (9, "Forest Protection", "Saving the lungs...", "🌳", "Ancient forests."),
+            (10, "Clean Transport", "E-bikes, EVs...", "🚲", "No footprint.")
+        ]
+        cursor.executemany("INSERT INTO topics VALUES (?,?,?,?,?)", topics_seed)
+
     conn.commit()
     conn.close()
 
@@ -65,6 +104,7 @@ def update_streak(user_id):
     user = cursor.fetchone()
     
     if not user:
+        conn.close()
         return
         
     last_date_str, current_streak, streak_freeze = user
@@ -241,6 +281,21 @@ def dashboard():
     conn = get_connection()
     cursor = conn.cursor()
 
+    # Check XP for level updates
+    cursor.execute("SELECT total_points FROM users WHERE user_id=?", (user_id,))
+    xp = cursor.fetchone()[0]
+    
+    update_league(cursor, user_id, xp)
+    check_achievements(cursor, user_id)
+    
+    # Notifications fetch
+    cursor.execute("SELECT message FROM notifications WHERE user_id = ? AND is_read = 0", (user_id,))
+    notifications = [n[0] for n in cursor.fetchall()]
+    cursor.execute("UPDATE notifications SET is_read = 1 WHERE user_id = ?", (user_id,))
+    
+    conn.commit()
+
+    # NOW fetch full user data for display
     cursor.execute("""
         SELECT u.name, u.total_points, u.level_name, u.stars, u.eco_coins, u.current_streak, u.mascot_level, l.name, l.icon
         FROM users u 
@@ -250,18 +305,9 @@ def dashboard():
     user_row = cursor.fetchone()
     
     if not user_row:
+        conn.close()
         session.clear()
         return redirect("/")
-        
-    update_league(cursor, user_id, user_row[1])
-    check_achievements(cursor, user_id)
-    
-    # Notifications fetch
-    cursor.execute("SELECT message FROM notifications WHERE user_id = ? AND is_read = 0", (user_id,))
-    notifications = [n[0] for n in cursor.fetchall()]
-    cursor.execute("UPDATE notifications SET is_read = 1 WHERE user_id = ?", (user_id,))
-    
-    conn.commit()
 
     # Fetch Achievements
     cursor.execute("""
@@ -527,8 +573,12 @@ def buy_item(item_id):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT eco_coins FROM users WHERE user_id=?", (user_id,))
-    coins = cursor.fetchone()[0]
+    user_data = cursor.fetchone()
+    if not user_data:
+        conn.close()
+        return redirect("/shop")
     
+    coins = user_data[0]
     if coins >= price:
         # Deduct coins
         cursor.execute("UPDATE users SET eco_coins = eco_coins - ? WHERE user_id = ?", (price, user_id))

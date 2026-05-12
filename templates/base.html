@@ -267,6 +267,19 @@
             mascotBubble.classList.add('hidden');
         }
 
+        // Show notifications if any
+        {% if notifications %}
+        const serverNotes = {{ notifications | tojson | safe }};
+        serverNotes.forEach((msg, i) => {
+            setTimeout(() => {
+                mascotText.innerText = msg;
+                mascotBubble.classList.remove('hidden');
+                // Play a reward sound if possible
+                if (window.playReward) window.playReward();
+            }, 2000 + (i * 3000));
+        });
+        {% endif %}
+
         // Show guide on page load (after 1s delay)
         {% if session.get('user_id') %}
         setTimeout(showGuide, 1500);
