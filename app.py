@@ -88,10 +88,9 @@ def update_streak(user_id):
         # First time
         cursor.execute("UPDATE users SET current_streak = 1, last_active_date = ? WHERE user_id = ?", (today_str, user_id))
         
-def update_league(user_id, xp):
-    conn = get_connection()
-    cursor = conn.cursor()
-    
+    conn.commit()
+    conn.close()
+def update_league(cursor, user_id, xp):
     new_league = 1
     if xp >= 5000: new_league = 5
     elif xp >= 3000: new_league = 4
@@ -106,9 +105,6 @@ def update_league(user_id, xp):
     elif xp >= 500: new_mascot_level = 2
     
     cursor.execute("UPDATE users SET mascot_level = ? WHERE user_id = ?", (new_mascot_level, user_id))
-    
-    conn.commit()
-    conn.close()
 
 def get_notifications(user_id):
     conn = get_connection()
@@ -120,9 +116,7 @@ def get_notifications(user_id):
     conn.close()
     return notes
 
-def check_achievements(user_id):
-    conn = get_connection()
-    cursor = conn.cursor()
+def check_achievements(cursor, user_id):
     
     # Get user stats
     cursor.execute("SELECT total_points, eco_coins, current_streak FROM users WHERE user_id=?", (user_id,))
@@ -146,9 +140,6 @@ def check_achievements(user_id):
         if not cursor.fetchone():
             cursor.execute("INSERT INTO user_achievements (user_id, achievement_id, date_unlocked) VALUES (?, 4, ?)", (user_id, date.today().isoformat()))
 
-    conn.commit()
-    conn.close()
-
 # LOGIN
 @app.route("/", methods=["GET", "POST"])
 def login():
@@ -171,7 +162,6 @@ def login():
                 (usn, password)
             )
             user = cursor.fetchone()
-            conn.close()
 
             if user:
                 session["user_id"] = user[0]
@@ -184,8 +174,10 @@ def login():
                 if m_lvl == 2: session["mascot_img"] = "mascot_stage2.png"
                 elif m_lvl == 3: session["mascot_img"] = "mascot_stage3.png"
                 
+                conn.close()
                 return redirect("/dashboard")
             else:
+                conn.close()
                 return render_template("login.html", error="Invalid login")
 
         # 📝 REGISTER
@@ -261,9 +253,15 @@ def dashboard():
         session.clear()
         return redirect("/")
         
-    update_league(user_id, user_row[1])
-    check_achievements(user_id)
-    notifications = get_notifications(user_id)
+    update_league(cursor, user_id, user_row[1])
+    check_achievements(cursor, user_id)
+    
+    # Notifications fetch
+    cursor.execute("SELECT message FROM notifications WHERE user_id = ? AND is_read = 0", (user_id,))
+    notifications = [n[0] for n in cursor.fetchall()]
+    cursor.execute("UPDATE notifications SET is_read = 1 WHERE user_id = ?", (user_id,))
+    
+    conn.commit()
 
     # Fetch Achievements
     cursor.execute("""
