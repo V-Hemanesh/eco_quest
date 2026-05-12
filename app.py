@@ -9,6 +9,43 @@ app.secret_key = "secret123"
 def get_connection():
     return sqlite3.connect("database.db")
 
+def init_db():
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Ensure users table has new columns
+    cursor.execute("PRAGMA table_info(users)")
+    cols = [c[1] for c in cursor.fetchall()]
+    if "mascot_level" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN mascot_level INTEGER DEFAULT 1")
+    if "league_id" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN league_id INTEGER DEFAULT 1")
+    if "max_combo" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN max_combo INTEGER DEFAULT 0")
+    if "stars" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN stars INTEGER DEFAULT 0")
+    if "eco_coins" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN eco_coins INTEGER DEFAULT 0")
+    if "current_streak" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN current_streak INTEGER DEFAULT 0")
+    if "last_active_date" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN last_active_date TEXT")
+    if "streak_freeze_active" not in cols: cursor.execute("ALTER TABLE users ADD COLUMN streak_freeze_active INTEGER DEFAULT 0")
+    
+    # Ensure leagues table exists and is populated
+    cursor.execute("CREATE TABLE IF NOT EXISTS leagues (league_id INTEGER PRIMARY KEY, name TEXT, min_xp INTEGER, icon TEXT)")
+    cursor.execute("SELECT COUNT(*) FROM leagues")
+    if cursor.fetchone()[0] == 0:
+        leagues = [(1, "Bronze League", 0, "🥉"), (2, "Silver League", 500, "🥈"), (3, "Gold League", 1500, "🥇"), (4, "Emerald League", 3000, "💎"), (5, "Titan League", 5000, "👑")]
+        cursor.executemany("INSERT INTO leagues VALUES (?,?,?,?)", leagues)
+        
+    # Ensure notifications table
+    cursor.execute("CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, message TEXT, is_read INTEGER DEFAULT 0, date_sent TEXT)")
+    
+    # Ensure topics has icon/desc
+    cursor.execute("PRAGMA table_info(topics)")
+    tcols = [c[1] for c in cursor.fetchall()]
+    if "icon" not in tcols: cursor.execute("ALTER TABLE topics ADD COLUMN icon TEXT")
+    if "description" not in tcols: cursor.execute("ALTER TABLE topics ADD COLUMN description TEXT")
+    
+    conn.commit()
+    conn.close()
+
+init_db()
+
 def get_badge(score, total):
     percentage = (score / total) * 100
     if percentage >= 80:
