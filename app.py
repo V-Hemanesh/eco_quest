@@ -412,6 +412,9 @@ def quiz(topic_id):
             else:
                 # Already max level
                 message = "🏆 Topic Completed!"
+                check_achievements(cursor, user_id)
+                conn.commit()
+                conn.close()
 
                 return render_template(
                     "result.html",
@@ -440,10 +443,9 @@ def quiz(topic_id):
                 VALUES (?, ?, ?)
             """, (user_id, topic_id, new_level))
 
+            check_achievements(cursor, user_id)
             conn.commit()
             conn.close()
-            
-            check_achievements(user_id)
 
             return render_template(
                 "result.html",
@@ -460,6 +462,7 @@ def quiz(topic_id):
         # FAIL CONDITION
         # ======================
         else:
+            conn.close()
             return render_template(
                 "result.html",
                 score=score,
