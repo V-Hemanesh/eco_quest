@@ -49,8 +49,37 @@ def update_streak(user_id):
         # First time
         cursor.execute("UPDATE users SET current_streak = 1, last_active_date = ? WHERE user_id = ?", (today_str, user_id))
         
+def update_league(user_id, xp):
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    new_league = 1
+    if xp >= 5000: new_league = 5
+    elif xp >= 3000: new_league = 4
+    elif xp >= 1500: new_league = 3
+    elif xp >= 500: new_league = 2
+    
+    cursor.execute("UPDATE users SET league_id = ? WHERE user_id = ?", (new_league, user_id))
+    
+    # Mascot Evolution logic
+    new_mascot_level = 1
+    if xp >= 2000: new_mascot_level = 3
+    elif xp >= 500: new_mascot_level = 2
+    
+    cursor.execute("UPDATE users SET mascot_level = ? WHERE user_id = ?", (new_mascot_level, user_id))
+    
     conn.commit()
     conn.close()
+
+def get_notifications(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT message FROM notifications WHERE user_id = ? AND is_read = 0", (user_id,))
+    notes = [n[0] for n in cursor.fetchall()]
+    cursor.execute("UPDATE notifications SET is_read = 1 WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return notes
 
 def check_achievements(user_id):
     conn = get_connection()
@@ -108,6 +137,14 @@ def login():
             if user:
                 session["user_id"] = user[0]
                 session["name"] = user[1]
+                
+                # Fetch initial mascot level
+                cursor.execute("SELECT mascot_level FROM users WHERE user_id=?", (user[0],))
+                m_lvl = cursor.fetchone()[0]
+                session["mascot_img"] = "mascot.png"
+                if m_lvl == 2: session["mascot_img"] = "mascot_stage2.png"
+                elif m_lvl == 3: session["mascot_img"] = "mascot_stage3.png"
+                
                 return redirect("/dashboard")
             else:
                 return render_template("login.html", error="Invalid login")
@@ -169,16 +206,21 @@ def dashboard():
     
     user_id = session["user_id"]
     update_streak(user_id)
-    check_achievements(user_id)
-        
+    
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT name, total_points, level_name, stars, eco_coins, current_streak
-        FROM users WHERE user_id=?
+        SELECT u.name, u.total_points, u.level_name, u.stars, u.eco_coins, u.current_streak, u.mascot_level, l.name, l.icon
+        FROM users u 
+        JOIN leagues l ON u.league_id = l.league_id
+        WHERE u.user_id=?
     """, (user_id,))
     user_row = cursor.fetchone()
+    
+    update_league(user_id, user_row[1])
+    check_achievements(user_id)
+    notifications = get_notifications(user_id)
 
     # Fetch Achievements
     cursor.execute("""
@@ -204,12 +246,22 @@ def dashboard():
     elif xp > 200: rank = "Sapling"
     elif xp > 100: rank = "Sprout"
 
+    # Pass mascot image path based on level
+    mascot_img = "mascot.png"
+    if user_row[6] == 2: mascot_img = "mascot_stage2.png"
+    elif user_row[6] == 3: mascot_img = "mascot_stage3.png"
+    session["mascot_img"] = mascot_img
+
     return render_template("dashboard.html", 
                          user=user_row, 
                          progress=progress, 
                          rank=rank,
                          achievements=achievements,
-                         quests=quests)
+                         quests=quests,
+                         notifications=notifications,
+                         mascot_img=mascot_img,
+                         league_name=user_row[7],
+                         league_icon=user_row[8])
 
 # LEARNING
 @app.route("/learning")

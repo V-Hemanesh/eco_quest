@@ -1,69 +1,153 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="animate-fade-in" style="max-width: 600px; margin: 0 auto; text-align: center;">
+<div class="animate-fade-in" style="width: 100%; max-width: 1200px; margin: 0 auto; text-align: center;">
 
-    <div style="margin-bottom: 40px;">
-        <h1 style="font-size: 2.5rem; margin-bottom: 10px; color: var(--text-main);">
-            🌍 Learning Path
+    <div style="margin-bottom: 40px; padding: 0 20px;">
+        <h1 style="font-size: 3rem; margin-bottom: 10px; color: var(--text-main); font-weight: 900; text-transform: uppercase; letter-spacing: -1px;">
+            🗺️ Eco-World Map
         </h1>
-        <p class="text-muted" style="font-size: 1.1rem;">
-            Follow the path to master the topics. Tap a node to start a mission!
+        <p class="text-muted" style="font-size: 1.2rem; font-weight: 700;">
+            Restore the biomes by mastering each mission!
         </p>
     </div>
 
-    <!-- Confetti zone (triggered via JS if ?passed=1) -->
-    <canvas id="confetti-canvas" style="display:none;"></canvas>
-
-    <div class="path-container" style="padding-bottom: 80px;">
-        {% for topic in topics %}
-        {% set offset = loop.cycle('-50px', '50px', '-30px', '30px') %}
-
-        <div class="path-node-wrap"
-            style="position: relative; left: {{ offset }}; display: flex; flex-direction: column; align-items: center;">
-            <a href="{{ url_for('quiz', topic_id=topic.id) }}" class="path-node" style="
-                 {% if topic.difficulty == 'Beginner' %}
-                     background: var(--primary); box-shadow: 0 8px 0 var(--primary-dark);
-                     animation-delay: {{ loop.index0 * 0.4 }}s;
-                 {% elif topic.difficulty == 'Intermediate' %}
-                     background: var(--warning); box-shadow: 0 8px 0 var(--warning-dark);
-                     animation-delay: {{ loop.index0 * 0.4 }}s;
-                 {% else %}
-                     background: #CE82FF; box-shadow: 0 8px 0 #A855F7;
-                     animation-delay: {{ loop.index0 * 0.4 }}s;
-                 {% endif %}" onclick="window.playClick && window.playClick()">
-
-                {{ topic.icon }}
-
-                <div class="tooltip">
-                    <div style="font-size: 1.1rem; margin-bottom: 4px; color: var(--text-main);">{{ topic.name }}</div>
-                    <span class="badge
-                        {% if topic.difficulty == 'Beginner' %}badge-beginner
-                        {% elif topic.difficulty == 'Intermediate' %}badge-intermediate
-                        {% else %}badge-advanced{% endif %}">
-                        {{ topic.difficulty }}
-                    </span>
-                    <div class="tooltip-xp"><i class="fa-solid fa-bolt"></i> +{{ topic.xp }} XP</div>
-                </div>
-            </a>
-
-            <!-- Connector segment -->
-            {% if not loop.last %}
-            <div style="width: 6px; height: 35px; margin-top: 6px;
-                        background: repeating-linear-gradient(to bottom, #B8F28B 0px, #B8F28B 8px, transparent 8px, transparent 16px);
-                        border-radius: 4px; opacity: 0.8;">
+    <!-- The World Map -->
+    <div class="world-map">
+        
+        <!-- BIOME 1: NATURE'S BREATH -->
+        <div class="biome-section nature-biome">
+            <h3 class="biome-label">🍃 Nature's Breath</h3>
+            <div class="biome-grid">
+                {% for t in topics if t.id in [1, 9, 5, 7] %}
+                <a href="{{ url_for('quiz', topic_id=t.id) }}" class="map-node node-nature" title="{{ t.name }}">
+                    <span class="node-icon">{{ t.icon }}</span>
+                    <div class="node-status">{{ t.difficulty }}</div>
+                </a>
+                {% endfor %}
             </div>
-            {% endif %}
         </div>
 
-        {% endfor %}
+        <!-- BIOME 2: WATER WORLD -->
+        <div class="biome-section water-biome">
+            <h3 class="biome-label">🌊 The Azure Depths</h3>
+            <div class="biome-grid">
+                {% for t in topics if t.id in [4, 8] %}
+                <a href="{{ url_for('quiz', topic_id=t.id) }}" class="map-node node-water" title="{{ t.name }}">
+                    <span class="node-icon">{{ t.icon }}</span>
+                    <div class="node-status">{{ t.difficulty }}</div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
 
-        <!-- Goal trophy -->
-        <div
-            style="margin-top: 10px; font-size: 4rem; animation: float 3s ease-in-out infinite; filter: drop-shadow(0 4px 12px rgba(255,200,0,0.4));">
-            🏆</div>
+        <!-- BIOME 3: POWER & CRISIS -->
+        <div class="biome-section fire-biome">
+            <h3 class="biome-label">🔥 The Solar Sands</h3>
+            <div class="biome-grid">
+                {% for t in topics if t.id in [3, 6, 2] %}
+                <a href="{{ url_for('quiz', topic_id=t.id) }}" class="map-node node-fire" title="{{ t.name }}">
+                    <span class="node-icon">{{ t.icon }}</span>
+                    <div class="node-status">{{ t.difficulty }}</div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- BIOME 4: FUTURE CITY -->
+        <div class="biome-section city-biome">
+            <h3 class="biome-label">🏢 Crystal Citadel</h3>
+            <div class="biome-grid">
+                {% for t in topics if t.id == 10 %}
+                <a href="{{ url_for('quiz', topic_id=t.id) }}" class="map-node node-city" title="{{ t.name }}">
+                    <span class="node-icon">{{ t.icon }}</span>
+                    <div class="node-status">{{ t.difficulty }}</div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
     </div>
 </div>
+
+<style>
+    .world-map {
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 40px;
+        border: 4px solid #e2e8f0;
+    }
+
+    .biome-section {
+        padding: 40px;
+        border-radius: 30px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .biome-label {
+        font-size: 1.5rem;
+        font-weight: 900;
+        margin-bottom: 25px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .biome-grid {
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+        flex-wrap: wrap;
+    }
+
+    /* Biome Themes */
+    .nature-biome { background: #e8f5e9; border: 3px solid #81c784; color: #2e7d32; }
+    .water-biome { background: #e3f2fd; border: 3px solid #64b5f6; color: #1565c0; }
+    .fire-biome { background: #fff3e0; border: 3px solid #ffb74d; color: #ef6c00; }
+    .city-biome { background: #f3e5f5; border: 3px solid #ba68c8; color: #7b1fa2; }
+
+    .map-node {
+        width: 100px;
+        height: 100px;
+        border-radius: 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+        box-shadow: 0 8px 0 rgba(0,0,0,0.1);
+    }
+
+    .map-node:hover {
+        transform: scale(1.1) translateY(-10px);
+        box-shadow: 0 15px 25px rgba(0,0,0,0.1);
+    }
+
+    .node-icon { font-size: 2.5rem; }
+
+    .node-status {
+        position: absolute;
+        bottom: -10px;
+        background: white;
+        padding: 4px 10px;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border: 2px solid currentColor;
+    }
+
+    /* Node Themes */
+    .node-nature { background: #fff; border: 4px solid #81c784; color: #2e7d32; }
+    .node-water { background: #fff; border: 4px solid #64b5f6; color: #1565c0; }
+    .node-fire { background: #fff; border: 4px solid #ffb74d; color: #ef6c00; }
+    .node-city { background: #fff; border: 4px solid #ba68c8; color: #7b1fa2; }
+</style>
 
 <script>
     // Trigger confetti if arriving after a passed quiz
